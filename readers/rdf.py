@@ -9,6 +9,8 @@ from SPARQLWrapper import SPARQLWrapper
 from models.knowledge_graph import KnowledgeGraph
 
 
+logger = logging.getLogger(__name__)
+
 def read(local_path=None, remote_path=None, format=None):
     """ Imports a RDF graph from local or remote file.
     Returns a Knowledge Graph
@@ -16,18 +18,18 @@ def read(local_path=None, remote_path=None, format=None):
 
     if local_path is None and remote_path is None:
         raise ValueError("Path cannot be left undefined")
-    logging.info("Importing RDF Graph from file")
+    logger.info("Importing RDF Graph from file")
 
     path = local_path if local_path is not None else remote_path
-    logging.info("Path set to '{}'".format(path))
+    logger.info("Path set to '{}'".format(path))
 
     if not format:
         format = guess_format(path)
-    logging.info("Format guessed to be '{}'".format(format))
+    logger.info("Format guessed to be '{}'".format(format))
 
     graph = Graph()
     graph.parse(path, format=format)
-    logging.info("RDF Graph succesfully imported")
+    logger.info("RDF Graph succesfully imported")
 
     return KnowledgeGraph(graph)
 
@@ -41,9 +43,9 @@ def query(query_string="", endpoint=""):
     if query_string == "":
         raise ValueError("Query cannot be left undefined")
 
-    logging.info("Importing RDF Graph via SPARQL query")
-    logging.info("Endpoint set to '{}'".format(endpoint))
-    logging.info("Query set to '{}'".format(query_string))
+    logger.info("Importing RDF Graph via SPARQL query")
+    logger.info("Endpoint set to '{}'".format(endpoint))
+    logger.info("Query set to '{}'".format(query_string))
 
     try:
         sparql = SPARQLWrapper(endpoint)
@@ -51,7 +53,7 @@ def query(query_string="", endpoint=""):
         graph = sparql.queryAndConvert()
     except:
         raise RuntimeError("Query Failed")
-    logging.info("Query results succesfully retrieved")
+    logger.info("Query results succesfully retrieved")
 
     return KnowledgeGraph(graph)
 

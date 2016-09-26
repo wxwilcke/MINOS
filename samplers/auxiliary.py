@@ -4,6 +4,8 @@ from collections import deque
 import logging
 
 
+logger = logging.getLogger(__name__)
+
 def depth_first_sampler(knowledge_graph=None, atom=None, depth=0, allow_loops=False, _last_atom=None,  _facts=None):
     """ recursive depth-first approach to built up graph around atom
 
@@ -65,7 +67,7 @@ def breadth_first_sampler(knowledge_graph=None, atom=None, size=0, strict_size=F
 
             search_iteration = 0
         if search_iteration >= search_iteration_limit:
-            logging.info("Reached maximum number of search iterations")
+            logger.info("Reached maximum number of search iterations")
             break
 
     if strict_size and size > 0:

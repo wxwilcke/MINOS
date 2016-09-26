@@ -13,18 +13,19 @@ class KnowledgeGraph:
     graph = None
 
     def __init__(self, graph=None):
-        logging.info("Initiating Knowledge Graph")
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("Initiating Knowledge Graph")
         self.graph = graph
 
     def load(self, graph=None):
         if graph is not None:
             self.graph = graph
-            logging.info("Graph loaded into Knowledge Graph")
+            self.logger.info("Graph loaded into Knowledge Graph")
 
     ### Generators ###
 
     def atoms(self, omit_duplicates=True):
-        logging.info("Yielding atoms")
+        self.logger.info("Yielding atoms")
         if omit_duplicates:
             atoms = frozenset(chain(self.graph.subjects(), self.graph.objects()))
         else:
@@ -34,7 +35,7 @@ class KnowledgeGraph:
             yield(atom)
 
     def non_terminal_atoms(self, omit_duplicates=True):
-        logging.info("Yielding non-terminal atoms")
+        self.logger.info("Yielding non-terminal atoms")
         if omit_duplicates:
             non_terminal_atoms = frozenset(self.graph.subjects())
         else:
@@ -50,7 +51,7 @@ class KnowledgeGraph:
         else:
             terminal_atoms = self.graph.objects()
 
-        logging.info("Yielding terminal atoms")
+        self.logger.info("Yielding terminal atoms")
         for atom in terminal_atoms:
             if atom in non_terminal_atoms:
                 continue
@@ -58,13 +59,13 @@ class KnowledgeGraph:
             yield(atom)
 
     def literals(self):
-        logging.info("Yielding literals")
+        self.logger.info("Yielding literals")
         for obj in self.graph.objects():
             if type(obj) is rdflib.Literal:
                 yield(obj)
 
     def resources(self, omit_blank_nodes=False):
-        logging.info("Yielding resources")
+        self.logger.info("Yielding resources")
         for res in self.atoms():
             if (type(res) is rdflib.Literal or
                (omit_blank_nodes and type(res) is rdflib.BNode)):
@@ -81,7 +82,7 @@ class KnowledgeGraph:
         else:
             predicates = self.graph.predicates()
 
-        logging.info("Yielding predicates")
+        self.logger.info("Yielding predicates")
         for p in predicates:
             if omit_literals and len(set(self.graph.objects(None, p))-literals) <= 0:
                 # p is only used with a literal as object
@@ -90,7 +91,7 @@ class KnowledgeGraph:
             yield(p)
 
     def triples(self, ignore_literals=False):
-        logging.info("Yielding triples")
+        self.logger.info("Yielding triples")
         for s,p,o in self.graph:
             if ignore_literals and type(o) is rdflib.Literal:
                 continue
@@ -106,7 +107,7 @@ class KnowledgeGraph:
         if strategy is None:
             raise ValueError('Strategy cannot be left undefined')
 
-        logging.info("Propositionalizing graph")
+        self.logger.info("Propositionalizing graph")
         return strategy.propositionalize(self, kwargs)
 
     def upgrade(self, strategy=None, **kwargs):
@@ -116,7 +117,7 @@ class KnowledgeGraph:
         if strategy is None:
             raise ValueError('Strategy cannot be left undefined')
 
-        logging.info("Upgrading graph")
+        self.logger.info("Upgrading graph")
         return strategy.upgrade(self, kwargs)
 
     def sample(self, strategy=None, **kwargs):
@@ -126,7 +127,7 @@ class KnowledgeGraph:
         if strategy is None:
             raise ValueError('Strategy cannot be left undefined')
 
-        logging.info("Sampling graph")
+        self.logger.info("Sampling graph")
         return strategy.sample(self, **kwargs)
 
 

@@ -30,10 +30,13 @@ Alterations:
 }
 """
 
-def generate_semantic_association_rules(knowledge_graph=None, list_of_cbs=[], minimal_local_support=1.0):
+logger = logging.getLogger(__name__)
+
+def generate_semantic_association_rules(instance_graph=None, ontology_graph=None, list_of_cbs=[], minimal_local_support=1.0):
     """ Generate semantic association rules from CBS
 
-    :param knowledge_graph: a knowledge graph for use in Lowest Level Class calculation
+    :param instance_graph: a knowledge graph instance
+    :param ontology_graph: a knowledge graph instance
     :param list_of_cbs: list of (CBS, similarity) tuples
     :param minimal_local_support: skip rules that do not meet the minimal local support
 
@@ -41,9 +44,10 @@ def generate_semantic_association_rules(knowledge_graph=None, list_of_cbs=[], mi
     """
     Rule = namedtuple('Rule', ['ctype', 'antecedent', 'consequent'])
 
+    logger.info("Generating Semantic Association Rules (LS >= {})".format(minimal_local_support))
     rules = []
     for cbs, _ in list_of_cbs:
-        for ctype, (coverage, local_support) in _lowest_level_class(knowledge_graph, cbs).items():
+        for ctype, (coverage, local_support) in _lowest_level_class(instance_graph, ontology_graph, cbs).items():
             if local_support < minimal_local_support:
                 continue
 
@@ -51,21 +55,23 @@ def generate_semantic_association_rules(knowledge_graph=None, list_of_cbs=[], mi
             for i in range(len(cbs_list)):
                 rules.append(Rule(ctype, cbs_list[i][1], [pa for _, pa in cbs_list[:i]+cbs_list[i+1:]]))
 
+    logger.info("Generated {} Semantic Association Rules".format(len(rules)))
+
     return rules
 
-def generate_semantic_item_sets(knowledge_graph=None, pattern=(None, None, None)):
+def generate_semantic_item_sets(instance_graph=None, pattern=(None, None, None)):
     """ Generate semantic item sets from a knowledge graph
 
-    :param knowledge_graph: the KnowledgeGraph instance to translate
+    :param instance_graph: a knowledge graph instance
     :param pattern: filter triples by pattern
     """
 
-    if knowledge_graph is None:
+    if instance_graph is None:
         raise ValueError('Missing input values.')
 
-    logging.info("Generating Semantic Item Set")
+    logger.info("Generating Semantic Item Set")
     item_set = {}
-    for s, p, o in knowledge_graph.graph.triples(pattern):
+    for s, p, o in instance_graph.graph.triples(pattern):
         k = (p, o)
         if k in item_set.keys():
             if s not in item_set[k]:
@@ -73,6 +79,8 @@ def generate_semantic_item_sets(knowledge_graph=None, pattern=(None, None, None)
             continue
 
         item_set[k] = {s}
+
+    logger.info("Generated {} Semantic Item Sets".format(len(item_set)))
 
     return item_set
 
@@ -86,7 +94,8 @@ def generate_common_behaviour_sets(item_sets={}, similarity_threshold=.75, max_c
     :returns: a list of tuples (CBS, s), with s being the similarity
     """
 
-    logging.info("Generating Common Behaviour Sets")
+    logger.info("Generating Common Behaviour Sets (sim >= {}, s <= {})".format(similarity_threshold,
+                                                                           max_cbs_size))
     common_behavioural_sets = []
     keys = list(item_sets.keys())
     for i in range(len(keys)):
@@ -103,6 +112,8 @@ def generate_common_behaviour_sets(item_sets={}, similarity_threshold=.75, max_c
                                               (es_1, pa_1)}),
                                               similarity))
     _cbs_extender(common_behavioural_sets, similarity_threshold, max_cbs_size)
+
+    logger.info("Generated {} Common Behaviour Sets".format(len(common_behavioural_sets)))
 
     return common_behavioural_sets
 
@@ -146,15 +157,16 @@ def _similarity_of(*list_of_element_sets):
     return (len(frozenset.intersection(*list_of_element_sets)) /
             len(frozenset.union(*list_of_element_sets)))
 
-def _class_hierarchy_branches(knowledge_graph, cbs):
+def _class_hierarchy_branches(instance_graph, ontology_graph, cbs):
     """ Generate class hierarchy branch of all ESs in a CBS
 
-    :param knowledge_graph: a knowledge graph instance
+    :param instance_graph: a knowledge graph instance
+    :param ontology_graph: a knowledge graph instance
     :param cbs: a CBS as a set
 
     :returns: a dictionary with elements as keys and branches as (nested) lists
     """
-    logging.info("Determining class hierarchy branches")
+    logger.debug("Determining class hierarchy branches")
     element_branches = {}
     for es, _ in cbs:
         for e in es:
@@ -162,9 +174,9 @@ def _class_hierarchy_branches(knowledge_graph, cbs):
                 continue
 
             branch = []
-            for t in knowledge_graph.graph.objects(e, RDF.type):
-                subbranch = []
-                _branch_traversal(knowledge_graph, t, subbranch)
+            for t in instance_graph.graph.objects(e, RDF.type):
+                subbranch = [t]
+                _branch_traversal(ontology_graph, t, subbranch)
 
                 branch.append(subbranch)
 
@@ -172,18 +184,18 @@ def _class_hierarchy_branches(knowledge_graph, cbs):
 
     return element_branches
 
-def _coverage_per_class(knowledge_graph, element_branches):
+def _coverage_per_class(instance_graph, element_branches):
     """ Determine instance coverage of class types
 
-    :param knowledge_graph: a knowledge graph instance
+    :param instance_graph: a knowledge graph instance
     :param cbs: a dictionary with elements as keys and branches as (nested) lists
 
     :returns: a dictionary with class types as keys and (instances, local coverage) tuples as items
     """
-    logging.info("Determining coverage per class")
+    logger.debug("Determining coverage per class")
     coverage = {}
     for e in element_branches.keys():
-        for ctype in knowledge_graph.graph.objects(e, RDF.type):
+        for ctype in instance_graph.graph.objects(e, RDF.type):
             if ctype in coverage.keys():
                 continue
             coverage[ctype] = ({e}, 0.0)
@@ -197,22 +209,23 @@ def _coverage_per_class(knowledge_graph, element_branches):
 
     return coverage
 
-def _lowest_level_class(knowledge_graph=None, cbs=frozenset()):
+def _lowest_level_class(instance_graph=None, ontology_graph=None, cbs=frozenset()):
     """ Determine the Lower Level Classes of the SE's in CBS
 
-    :param knowledge_graph: a knowledge graph for use in Lowest Level Class calculation
+    :param instance_graph: a knowledge graph instance
+    :param ontology_graph: a knowledge graph instance
     :param cbs: a CBS (set of (es, pa) sets)
 
     :returns: a dictionary holding class:({covered elements}, coverage support) items
     """
     # determing class hierarchy for elements in cbs
-    element_branches = _class_hierarchy_branches(knowledge_graph, cbs)
+    element_branches = _class_hierarchy_branches(instance_graph, ontology_graph, cbs)
     number_of_elements = len(element_branches)
 
     # determine coverage per class
-    coverage = _coverage_per_class(knowledge_graph, _class_hierarchy_branches(knowledge_graph, cbs))
+    coverage = _coverage_per_class(instance_graph, element_branches)
 
-    logging.info("Filtering LLC coverage")
+    logger.debug("Filtering LLC coverage")
     sorted_keys = sorted(coverage, key=lambda k: len(coverage[k][0]), reverse=True)
     for i in range(1, len(sorted_keys)):
         # prever broader coverage
@@ -226,31 +239,31 @@ def _lowest_level_class(knowledge_graph=None, cbs=frozenset()):
 
     return coverage
 
-def _branch_traversal(knowledge_graph, ctype, branch):
+def _branch_traversal(ontology_graph, ctype, branch):
     """ Determine the upward class hierarchy branch for each class
 
-    :param knowledge_graph: a knowledge graph for use in Lowest Level Class calculation
+    :param ontology_graph: a knowledge graph instance
     :param ctype: the class type to start from
     :param branch: a list representing the branch, multiple inheritence results in nested lists
 
     :updates: branch
     :returns: none
     """
-    sclasses = list(knowledge_graph.graph.objects(ctype, RDFS.subClassOf))
+    sclasses = list(ontology_graph.graph.objects(ctype, RDFS.subClassOf))
     if len(sclasses) == 1:
         sclass = sclasses[0]
         branch.append(sclass)
-        _branch_traversal(knowledge_graph.graph, sclass, branch)
+        _branch_traversal(ontology_graph, sclass, branch)
     elif len(sclasses) >= 2:
         for sclass in sclasses:
             subbranch = [sclass]
-            _branch_traversal(knowledge_graph.graph, sclass, subbranch)
+            _branch_traversal(ontology_graph, sclass, subbranch)
             branch.append(subbranch)
 
-def support_of(knowledge_graph, rule):
+def support_of(instance_graph, rule):
     """ Calculate the support for rule r given knowledge graph G
 
-    :param knowledge_graph: a knowledge graph
+    :param instance_graph: a knowledge graph instance
     :param rule: a semantic association rule as tuple (type, antecedent, consequent(s))
 
     :returns: support value between 0 and 1
@@ -258,19 +271,19 @@ def support_of(knowledge_graph, rule):
     ctype = rule[0]
     p, o = rule[1]  # antecedent
 
-    logging.info("Calculating support")
+    logger.debug("Calculating support")
     number_of_supporting_facts = 0
-    elements_of_type = frozenset(knowledge_graph.graph.subjects(RDF.type, ctype))
+    elements_of_type = frozenset(instance_graph.graph.subjects(RDF.type, ctype))
     for s in elements_of_type:
-        if (s, p, o) in knowledge_graph.graph:
+        if (s, p, o) in instance_graph.graph:
             number_of_supporting_facts += 1
 
     return number_of_supporting_facts / len(elements_of_type)
 
-def confidence_of(knowledge_graph, rule):
+def confidence_of(instance_graph, rule):
     """ Calculate the confidence for rule r given knowledge graph G
 
-    :param knowledge_graph: a knowledge graph
+    :param instance_graph: a knowledge graph instance
     :param rule: a semantic association rule as tuple (type, antecedent, consequent(s))
 
     :returns: confidence value between 0 and 1
@@ -278,17 +291,17 @@ def confidence_of(knowledge_graph, rule):
     ctype = rule[0]
     p_0, o_0 = rule[1]  # antecedent
 
-    logging.info("Calculating confidence")
+    logger.debug("Calculating confidence")
     number_of_antecedent_supporting_facts = 0
     number_of_rule_supporting_facts = 0
-    elements_of_type = frozenset(knowledge_graph.graph.subjects(RDF.type, ctype))
+    elements_of_type = frozenset(instance_graph.graph.subjects(RDF.type, ctype))
     for s in elements_of_type:
-        if (s, p_0, o_0) not in knowledge_graph.graph:
+        if (s, p_0, o_0) not in instance_graph.graph:
             continue
 
         number_of_antecedent_supporting_facts += 1
         for p_1, o_1 in rule[2]:  # consequent
-            if (s, p_1, o_1) not in knowledge_graph.graph:
+            if (s, p_1, o_1) not in instance_graph.graph:
                 break
 
         number_of_rule_supporting_facts += 1

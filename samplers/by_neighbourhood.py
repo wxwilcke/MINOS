@@ -6,6 +6,8 @@ from models.knowledge_graph import KnowledgeGraph
 from samplers.auxiliary import depth_first_sampler
 
 
+logger = logging.getLogger(__name__)
+
 def sample(knowledge_graph=None, pattern=(None, None, None), depth=1):
     """ Return neighbourhood context of one or more instances of a non-terminal atom.
 
@@ -18,7 +20,7 @@ def sample(knowledge_graph=None, pattern=(None, None, None), depth=1):
 
     kg = KnowledgeGraph(rdflib.Graph())
     if knowledge_graph is not None and pattern is not None:
-        logging.info("Sampling neighbourhood up to depth {}".format(depth))
+        logger.info("Sampling neighbourhood up to depth {}".format(depth))
         for subject, _, _ in knowledge_graph.graph.triples(pattern):
             facts = depth_first_sampler(knowledge_graph,
                                         subject,

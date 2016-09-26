@@ -6,6 +6,8 @@ from models.knowledge_graph import KnowledgeGraph
 from samplers.auxiliary import breadth_first_sampler
 
 
+logger = logging.getLogger(__name__)
+
 def sample(knowledge_graph=None, pattern=(None, None, None), size=1, strict_size=False):
     """ Return spiral context up to size s of one or more instances of a non-terminal atom.
 
@@ -18,7 +20,7 @@ def sample(knowledge_graph=None, pattern=(None, None, None), size=1, strict_size
     """
     kg = KnowledgeGraph(rdflib.Graph())
     if knowledge_graph is not None and pattern is not None:
-        logging.info("Sampling spiral neighbourhood up to size {}".format(size))
+        logger.info("Sampling spiral neighbourhood up to size {}".format(size))
         for subject, _, _ in knowledge_graph.graph.triples(pattern):
             facts = breadth_first_sampler(knowledge_graph,
                                           subject,

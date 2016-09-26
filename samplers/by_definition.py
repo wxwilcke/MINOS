@@ -5,6 +5,8 @@ import rdflib
 from models.knowledge_graph import KnowledgeGraph
 
 
+logger = logging.getLogger(__name__)
+
 def sample(knowledge_graph=None, pattern=(None, None, None), context=[], strict_context=True):
     """ Return user-defined context of one or more instances of a non-terminal atom.
 
@@ -19,7 +21,7 @@ def sample(knowledge_graph=None, pattern=(None, None, None), context=[], strict_
     if knowledge_graph is None or pattern is None:
         raise ValueError("Missing parameter values")
 
-    logging.info("Sampling user-defined context")
+    logger.info("Sampling user-defined context")
     individuals = frozenset(s for s, _, _ in knowledge_graph.graph.triples(pattern))
 
     return _sample_context(knowledge_graph, individuals, context, strict_context)
