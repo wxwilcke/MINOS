@@ -2,7 +2,6 @@
 
 import sys
 import logging
-from collections import namedtuple
 from rdflib.namespace import RDF, RDFS
 
 
@@ -42,7 +41,6 @@ def generate_semantic_association_rules(instance_graph=None, ontology_graph=None
 
     :returns: a list of rules as tuples (class type, antecedent, consequent [with conjunctions])
     """
-    Rule = namedtuple('Rule', ['ctype', 'antecedent', 'consequent'])
 
     logger.info("Generating Semantic Association Rules (LS >= {})".format(minimal_local_support))
     rules = []
@@ -53,7 +51,7 @@ def generate_semantic_association_rules(instance_graph=None, ontology_graph=None
 
             cbs_list = list(cbs)
             for i in range(len(cbs_list)):
-                rules.append(Rule(ctype, cbs_list[i][1], [pa for _, pa in cbs_list[:i]+cbs_list[i+1:]]))
+                rules.append((ctype, cbs_list[i][1], [pa for _, pa in cbs_list[:i]+cbs_list[i+1:]]))
 
     logger.info("Generated {} Semantic Association Rules".format(len(rules)))
 

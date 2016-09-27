@@ -31,20 +31,20 @@ def _rule_to_string(irule):
 
     :returns: a string
     """
-    consequent = """{}""".format(irule.rule.consequent[0])
-    if len(irule.rule.consequent) > 1:
+    consequent = """{}""".format(irule[0][2][0])
+    if len(irule[0][2]) > 1:
         consequent += """\n\tAND  """\
-                    + """\n\tAND  """.join(["{}".format(irule.rule.consequent[i])\
-                                            for i in range(1, len(irule.rule.consequent))])
+                    + """\n\tAND  """.join(["{}".format(irule[0][2][i])\
+                                            for i in range(1, len(irule[0][2]))])
 
     string = """[{}]
     IF   {}
     THEN {}
     Support:    {:.3f}
-    Confidence: {:.3f}\n""".format(irule.rule.ctype,
-                              irule.rule.antecedent,
+    Confidence: {:.3f}\n""".format(irule[0][0],
+                              irule[0][1],
                               consequent,
-                              irule.support,
-                              irule.confidence)
+                              irule[1],
+                              irule[2])
 
     return string
