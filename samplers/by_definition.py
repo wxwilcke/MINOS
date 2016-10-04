@@ -7,22 +7,26 @@ from models.knowledge_graph import KnowledgeGraph
 
 logger = logging.getLogger(__name__)
 
-def sample(knowledge_graph=None, pattern=(None, None, None), context=[], strict_context=True):
+def sample(knowledge_graph=None, patterns=[(None, None, None)], context=[], strict_context=True):
     """ Return user-defined context of one or more instances of a non-terminal atom.
 
     :param knowledge_graph: a KnowledgeGraph instance to sample
-    :param pattern: a triple pattern (None, p, o) to filter sample with
+    :param patterns: a list of triple patterns (None, p, o) to filter sample with
     :param context: a list of predicates (paths as tuple) to sample objects of
     :param strict_context: true is context is a strong constraint
 
     :returns: the sample as a KnowledgeGraph instance
     """
 
-    if knowledge_graph is None or pattern is None:
+    if knowledge_graph is None:
         raise ValueError("Missing parameter values")
 
     logger.info("Sampling user-defined context")
-    individuals = frozenset(s for s, _, _ in knowledge_graph.graph.triples(pattern))
+    logger.info("Pattern:\n\t" + "\n\t".join(["{}".format(pattern) for pattern in patterns]))
+    individuals = frozenset(s for pattern in patterns for s, _, _ in knowledge_graph.graph.triples(pattern))
+
+    logger.info("Pattern matches {} individuals".format(len(individuals)))
+    logger.info("Context:\n\t" + "\n\t".join(["{}".format(path) for path in context]))
 
     return _sample_context(knowledge_graph, individuals, context, strict_context)
 
@@ -52,6 +56,7 @@ def _sample_context(knowledge_graph, individuals, context, strict_context):
         for fact in facts:
             kg.graph.add(fact)
 
+    logger.info("Sample contains {} facts".format(len(kg.graph)))
     return kg
 
 def _recursive_path_walk(knowledge_graph, atom, context, strict_context, _facts=None):

@@ -29,7 +29,7 @@ def read(local_path=None, remote_path=None, format=None):
 
     graph = Graph()
     graph.parse(path, format=format)
-    logger.info("RDF Graph succesfully imported")
+    logger.info("RDF Graph ({} facts) succesfully imported".format(len(graph)))
 
     return KnowledgeGraph(graph)
 
@@ -53,7 +53,7 @@ def query(query_string="", endpoint=""):
         graph = sparql.queryAndConvert()
     except:
         raise RuntimeError("Query Failed")
-    logger.info("Query results succesfully retrieved")
+    logger.info("Query results ({} facts) succesfully retrieved".format(len(graph)))
 
     return KnowledgeGraph(graph)
 

@@ -16,7 +16,7 @@ def pretty_write(output=[], path="./of/latest", overwrite=True):
     """
     mode = 'w' if overwrite else 'x'
 
-    logger.info("Writing rules mode {} to {}".format(mode, path))
+    logger.info("Writing rules (mode {}) to {}".format(mode, path))
 
     with open(path, mode) as f:
         for rule in output:

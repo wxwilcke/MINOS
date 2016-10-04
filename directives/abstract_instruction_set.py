@@ -12,7 +12,7 @@ class AbstractInstructionSet():
         return
 
     @abc.abstractmethod
-    def load_dataset(self):
+    def load_dataset(self, hyperparameters):
         """Load dataset into container"""
         return
 

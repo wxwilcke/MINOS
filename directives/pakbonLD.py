@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import logging
-from collections import namedtuple
+from operator import itemgetter
 from timeit import default_timer as timer
 import rdflib
 from .abstract_instruction_set import AbstractInstructionSet
@@ -21,11 +21,11 @@ class PakbonLD(AbstractInstructionSet):
         self.logger = logging.getLogger(__name__)
 
     def print_header(self):
-        header = 'A directive to learn association rules over the PakbonLD cloud'
+        header = "PAKBON: Context ('Sporen') with 12 attributes"
         print(header)
         print('-' * len(header))
 
-    def load_dataset(self):
+    def load_dataset(self, abox, tbox):
         """
         # pakbonLD SPARQL endpoint
         endpoint = "http://pakbon-ld.spider.d2s.labs.vu.nl/sparql/"
@@ -47,8 +47,8 @@ class PakbonLD(AbstractInstructionSet):
         """
 
         # read graphs
-        kg_i = rdf.read(local_path="./if/instance_graph.ttl")
-        kg_s = rdf.read(local_path="./if/ontology_graph.ttl")
+        kg_i = rdf.read(local_path=abox)
+        kg_s = rdf.read(local_path=tbox)
 
         # sample by pattern
         pattern = (None,
@@ -88,7 +88,7 @@ class PakbonLD(AbstractInstructionSet):
                     rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P141_assigned"),
                     rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_eindperiode"))]
 
-        kg_i_sampled = kg_i.sample(sampler, pattern=pattern, context=context)
+        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], context=context)
 
         return (kg_i, kg_s, kg_i_sampled)
 
@@ -117,34 +117,35 @@ class PakbonLD(AbstractInstructionSet):
 
         # calculate support and confidence, skip those not meeting minimum requirements
         final_rule_set = []
-        SCRule = namedtuple('SCRule', ['rule', 'support', 'confidence'])
         for rule in rules:
             support = support_of(kg_i, rule)
             confidence = confidence_of(kg_i, rule)
 
             if support >= hyperparameters["minimal_support"] and\
                confidence >= hyperparameters["minimal_confidence"]:
-                final_rule_set.append(SCRule(rule, support, confidence))
+                final_rule_set.append((rule, support, confidence))
 
-        t1 = timer()
+        # sorting rules on both support and confidence
+        final_rule_set.sort(key=itemgetter(1, 2), reverse=True)
 
         # time took
+        t1 = timer()
         dt = t1 - t0
         print("  Program completed in {:.3f} ms".format(dt))
 
         print("  Found {} rules".format(len(final_rule_set)))
         return final_rule_set
 
-    def write_to_file(self, output=[]):
-        path = "./of/output-{}".format(self.time)
+    def write_to_file(self, path="./of/latest", output=[]):
         overwrite = False
 
         print(" Writing output to {}...".format(path))
         rule_set.pretty_write(output, path, overwrite)
         pickler.write(output, path+".pickle", overwrite)
 
-    def run(self):
+    def run(self, abox, tbox, output_path):
         self.print_header()
+        print(" {}\n".format(self.time))
 
         hyperparameters = {}
         hyperparameters["similarity_threshold"] = .6
@@ -154,10 +155,10 @@ class PakbonLD(AbstractInstructionSet):
         hyperparameters["minimal_confidence"] = 0.0
 
         print(" Importing Data Sets...")
-        dataset = self.load_dataset()
+        dataset = self.load_dataset(abox, tbox)
 
         print(" Initiated Pattern Learning...")
         output = self.run_program(dataset, hyperparameters)
 
         if len(output) > 0:
-            self.write_to_file(output)
+            self.write_to_file(output_path, output)
