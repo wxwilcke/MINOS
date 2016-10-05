@@ -12,12 +12,12 @@ class AbstractInstructionSet():
         return
 
     @abc.abstractmethod
-    def load_dataset(self, hyperparameters):
+    def load_dataset(self, parameters):
         """Load dataset into container"""
         return
 
     @abc.abstractmethod
-    def run_program(self, dataset, hyperparameters):
+    def run_program(self, dataset, parameters):
         """Main loop of instruction set"""
         return
 
