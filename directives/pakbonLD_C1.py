@@ -28,19 +28,19 @@ class PakbonLD(AbstractInstructionSet):
         kg_i = rdf.read(local_path=abox)
         kg_s = rdf.read(local_path=tbox)
 
-        return (kg_i, kg_s, kg_i)
+        return (kg_i, kg_s)
 
     def run_program(self, dataset, hyperparameters):
         self.logger.info("Starting run\nParameters:\n{}".format(
             "\n".join(["\t{}: {}".format(k,v) for k,v in hyperparameters.items()])))
 
-        kg_i, kg_s, kg_i_sampled = dataset
+        kg_i, kg_s = dataset
 
         # fit model
         t0 = timer()
 
         # generate semantic item sets from sampled graph
-        si_sets = generate_semantic_item_sets(kg_i_sampled)
+        si_sets = generate_semantic_item_sets(kg_i)
 
         # generate common behaviour sets
         cbs_sets = generate_common_behaviour_sets(si_sets,
@@ -64,7 +64,7 @@ class PakbonLD(AbstractInstructionSet):
                 final_rule_set.append((rule, support, confidence))
 
         # sorting rules on both support and confidence
-        final_rule_set.sort(key=itemgetter(1, 2), reverse=True)
+        final_rule_set.sort(key=itemgetter(2, 1), reverse=True)
 
         # time took
         t1 = timer()

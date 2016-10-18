@@ -2,18 +2,24 @@
 
 import logging
 from operator import itemgetter
+from multiprocessing import Process, Manager, Pool, cpu_count
+from functools import partial
+from math import floor
 from timeit import default_timer as timer
 import rdflib
 from .abstract_instruction_set import AbstractInstructionSet
 from readers import rdf
 from writers import rule_set, pickler
 from samplers import by_definition as sampler
-from algorithms.semantic_rule_learning import generate_semantic_association_rules,\
-                                              generate_semantic_item_sets,\
-                                              generate_common_behaviour_sets,\
-                                              support_of,\
-                                              confidence_of
+from algorithms.semantic_rule_learning_mp import generate_semantic_association_rules,\
+                                                 generate_semantic_item_sets,\
+                                                 generate_common_behaviour_sets,\
+                                                 extend_common_behaviour_sets,\
+                                                 evaluate_rules
 
+
+NUM_CORES_PER_CPU = 2
+NUM_OF_WORKERS = cpu_count() * NUM_CORES_PER_CPU
 
 class PakbonLD(AbstractInstructionSet):
     def __init__(self, time=""):
@@ -92,38 +98,153 @@ class PakbonLD(AbstractInstructionSet):
 
         return (kg_i_sampled, kg_s)
 
-    def run_program(self, dataset, hyperparameters):
+    def run_program(self, dataset, parameters):
         self.logger.info("Starting run\nParameters:\n{}".format(
-            "\n".join(["\t{}: {}".format(k,v) for k,v in hyperparameters.items()])))
+            "\n".join(["\t{}: {}".format(k,v) for k,v in parameters.items()])))
+        self.logger.info("Distributing load over {} cores".format(NUM_OF_WORKERS))
 
         kg_i, kg_s = dataset
 
         # fit model
         t0 = timer()
 
+        # MP manager
+        manager = Manager()
+
         # generate semantic item sets from sampled graph
-        si_sets = generate_semantic_item_sets(kg_i)
+        triples = manager.list(kg_i.graph)
+        chunksize = floor(len(triples) / NUM_OF_WORKERS)
+        slices = [slice(i, i+chunksize) for i in range(0, len(triples), chunksize)]
+        batches = [triples[slc] for slc in slices]
+        si_sets = manager.dict()
+        with Pool(processes=NUM_OF_WORKERS) as pool:
+            it = pool.imap_unordered(func=generate_semantic_item_sets, iterable=batches)
+
+            while True:
+                try:
+                    # sync dicts
+                    si_set = next(it)
+                    for k in si_set.keys():
+                        if k in si_sets.keys():
+                            items = si_sets[k]
+                            items.update(si_set[k])
+                            si_sets[k] = items
+                            continue
+                        si_sets[k] = si_set[k]
+                except StopIteration:
+                    break
+
 
         # generate common behaviour sets
-        cbs_sets = generate_common_behaviour_sets(si_sets,
-                                                  hyperparameters["similarity_threshold"],
-                                                  hyperparameters["max_cbs_size"])
+        work = manager.Queue()
+        keys = list(si_sets.keys())
+        size = floor(len(keys) / NUM_OF_WORKERS)
+        slices = [range(i, i+size) for i in range(0, len(keys), size)]
+
+        cbs_sets = manager.list()
+        pool = []
+        for i in range(NUM_OF_WORKERS):
+            p = Process(target=generate_common_behaviour_sets, args=(si_sets,
+                                                                     cbs_sets,
+                                                                     work,
+                                                                     parameters["similarity_threshold"]))
+            p.daemon = True
+            p.start()
+            pool.append(p)
+
+        for slce in slices:
+            work.put(slce)
+
+        for p in pool:
+            work.put(None)
+
+        # join shared variables
+        for p in pool:
+            p.join()
+
+
+        # extend common behaviour sets
+        cbs_size = 2
+        cbs_sets_extended = manager.list(cbs_sets)
+        while cbs_size < parameters["max_cbs_size"]:
+            func = partial(extend_common_behaviour_sets, cbs_sets_extended, parameters["similarity_threshold"])
+
+            chunksize = floor(len(cbs_sets_extended) / NUM_OF_WORKERS)
+            slices = [range(i, i+chunksize) for i in range(0, len(cbs_sets_extended), chunksize)]
+            cbs_sets_extention = manager.list()
+            with Pool(processes=NUM_OF_WORKERS) as pool:
+                it = pool.imap_unordered(func=func, iterable=slices)
+
+                while True:
+                    try:
+                        cbs_subset = next(it)
+                        cbs_sets_extention.extend(cbs_subset)
+                    except StopIteration:
+                        break
+
+            cbs_sets.extend(cbs_sets_extention)
+            cbs_sets_extended = cbs_sets_extention
+            cbs_size *= 2
+
 
         # generate semantic association rules
-        rules = generate_semantic_association_rules(kg_i,
-                                                    kg_s,
-                                                    cbs_sets,
-                                                    hyperparameters["minimal_local_support"])
+        rules = manager.list()
+        work = manager.Queue()
+        size = floor(len(cbs_sets) / NUM_OF_WORKERS)
+        slices = [slice(i, i+size) for i in range(0, len(cbs_sets), size)]
+
+        pool = []
+        for i in range(NUM_OF_WORKERS):
+            p = Process(target=generate_semantic_association_rules, args=(kg_i,
+                                                                          kg_s,
+                                                                          cbs_sets,
+                                                                          work,
+                                                                          rules,
+                                                                          parameters["minimal_local_support"]))
+            p.daemon = True
+            p.start()
+            pool.append(p)
+
+        for slce in slices:
+            work.put(slce)
+
+        for p in pool:
+            work.put(None)
+
+        # join shared variables
+        for p in pool:
+            p.join()
+
 
         # calculate support and confidence, skip those not meeting minimum requirements
-        final_rule_set = []
-        for rule in rules:
-            support = support_of(kg_i, rule)
-            confidence = confidence_of(kg_i, rule)
+        final_rule_set = manager.list()
+        work = manager.Queue()
+        size = floor(len(rules) / NUM_OF_WORKERS)
+        slices = [slice(i, i+size) for i in range(0, len(rules), size)]
 
-            if support >= hyperparameters["minimal_support"] and\
-               confidence >= hyperparameters["minimal_confidence"]:
-                final_rule_set.append((rule, support, confidence))
+        pool = []
+        for i in range(NUM_OF_WORKERS):
+            p = Process(target=evaluate_rules, args=(kg_i,
+                                                     rules,
+                                                     work,
+                                                     final_rule_set,
+                                                     parameters["minimal_support"],
+                                                     parameters["minimal_confidence"]))
+
+            p.daemon = True
+            p.start()
+            pool.append(p)
+
+        for slce in slices:
+            work.put(slce)
+
+        for p in pool:
+            work.put(None)
+
+        # join shared variables
+        for p in pool:
+            p.join()
+
 
         # sorting rules on both support and confidence
         final_rule_set.sort(key=itemgetter(2, 1), reverse=True)
@@ -147,18 +268,18 @@ class PakbonLD(AbstractInstructionSet):
         self.print_header()
         print(" {}\n".format(self.time))
 
-        hyperparameters = {}
-        hyperparameters["similarity_threshold"] = .5
-        hyperparameters["max_cbs_size"] = 4
-        hyperparameters["minimal_local_support"] = 0.0
-        hyperparameters["minimal_support"] = 0.0
-        hyperparameters["minimal_confidence"] = 0.0
+        parameters = {}
+        parameters["similarity_threshold"] = .5
+        parameters["max_cbs_size"] = 4
+        parameters["minimal_local_support"] = 0.0
+        parameters["minimal_support"] = 0.0
+        parameters["minimal_confidence"] = 0.0
 
         print(" Importing Data Sets...")
         dataset = self.load_dataset(abox, tbox)
 
         print(" Initiated Pattern Learning...")
-        output = self.run_program(dataset, hyperparameters)
+        output = self.run_program(dataset, parameters)
 
         if len(output) > 0:
             self.write_to_file(output_path, output)
