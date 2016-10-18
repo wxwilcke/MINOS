@@ -21,6 +21,10 @@ def sample(knowledge_graph=None, patterns=[(None, None, None)], context=[], stri
     if knowledge_graph is None:
         raise ValueError("Missing parameter values")
 
+    # type is required
+    if rdflib.RDF.type not in context:
+        context.append(rdflib.RDF.type)
+
     logger.info("Sampling user-defined context")
     logger.info("Pattern:\n\t" + "\n\t".join(["{}".format(pattern) for pattern in patterns]))
     individuals = frozenset(s for pattern in patterns for s, _, _ in knowledge_graph.graph.triples(pattern))

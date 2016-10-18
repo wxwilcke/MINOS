@@ -1,12 +1,12 @@
 #!/usr/bin/python3
 
-import sys
 import logging
+import multiprocessing
 from rdflib.namespace import RDF, RDFS
 
 
 """
-Implementation of SWARM Semantic Rule Mining algorithm [Barati2016].
+Multicore implementation of SWARM Semantic Rule Mining algorithm [Barati2016].
 
 Alterations:
     * Limit on exactly two SI sets per CBS is lifted. This allows conjunctions in the consequent, e.g. A -> B /\ C.
@@ -31,106 +31,123 @@ Alterations:
 
 logger = logging.getLogger(__name__)
 
-def generate_semantic_association_rules(instance_graph=None, ontology_graph=None, list_of_cbs=[], minimal_local_support=1.0):
+def generate_semantic_association_rules(instance_graph, ontology_graph, cbs_sets, queue, rules, minimal_local_support=1.0):
     """ Generate semantic association rules from CBS
 
     :param instance_graph: a knowledge graph instance
     :param ontology_graph: a knowledge graph instance
-    :param list_of_cbs: list of (CBS, similarity) tuples
+    :param cbs_sets: shared list of (CBS, similarity) tuples
+    :param queue: shared queue with slices from cbs_sets
+    :param rules: shared list of rules as tuples (class type, antecedent, consequent [with conjunctions])
     :param minimal_local_support: skip rules that do not meet the minimal local support
 
-    :returns: a list of rules as tuples (class type, antecedent, consequent [with conjunctions])
+    :returns: None
     """
 
-    logger.info("Generating Semantic Association Rules (LS >= {})".format(minimal_local_support))
-    rules = []
-    for cbs, _ in list_of_cbs:
-        for ctype, (coverage, local_support) in _lowest_level_class(instance_graph, ontology_graph, cbs).items():
-            if local_support < minimal_local_support:
-                continue
+    pid = multiprocessing.current_process()
+    logger.info("{} - Generating Semantic Association Rules (LS >= {})".format(pid, minimal_local_support))
+    while True:
+        work = queue.get()
+        if work is None:
+            break
 
-            cbs_list = list(cbs)
-            for i in range(len(cbs_list)):
-                rules.append((ctype, cbs_list[i][1], [pa for _, pa in cbs_list[:i]+cbs_list[i+1:]]))
+        for cbs, _ in cbs_sets[work]:
+            for ctype, (coverage, local_support) in _lowest_level_class(instance_graph, ontology_graph, cbs).items():
+                if local_support < minimal_local_support:
+                    continue
 
-    logger.info("Generated {} Semantic Association Rules".format(len(rules)))
+                cbs_list = list(cbs)
+                for i in range(len(cbs_list)):
+                    rules.append((ctype, cbs_list[i][1], [pa for _, pa in cbs_list[:i]+cbs_list[i+1:]]))
 
-    return rules
+    logger.info("{} - Generated {} Semantic Association Rules".format(pid, len(rules)))
 
-def generate_semantic_item_sets(instance_graph=None, pattern=(None, None, None)):
+def generate_semantic_item_sets(instance_graph):
     """ Generate semantic item sets from a knowledge graph
 
-    :param instance_graph: a knowledge graph instance
-    :param pattern: filter triples by pattern
+    :param instance_graph: shared knowledge graph instance as list
+
+    :returns: dictionary with (p, o) pairs as keys and set of matching s as value
     """
 
-    if instance_graph is None:
-        raise ValueError('Missing input values.')
-
-    logger.info("Generating Semantic Item Set")
-    item_set = {}
-    for s, p, o in instance_graph.graph.triples(pattern):
+    pid = multiprocessing.current_process()
+    logger.info("{} - Generating Semantic Item Set".format(pid))
+    d = {}
+    for s, p, o in instance_graph:
         k = (p, o)
-        if k in item_set.keys():
-            if s not in item_set[k]:
-                item_set[k].add(s)
+
+        if k in d.keys():
+            d[k].add(s)
             continue
+ 
+        d[k] = {s}
 
-        item_set[k] = {s}
+    logger.info("{} - Generated {} Semantic Item Sets".format(pid, len(d)))
+    return d
 
-    logger.info("Generated {} Semantic Item Sets".format(len(item_set)))
-
-    return item_set
-
-def generate_common_behaviour_sets(item_sets={}, similarity_threshold=.75, max_cbs_size=2):
+def generate_common_behaviour_sets(item_sets, cb_sets, queue, similarity_threshold=.75):
     """ Generate Common Behaviour Sets (CBS) from Semantic Item Sets
 
-    :param item_sets: dictionary with (p, o)-pairs as key and item sets as value
+    :param item_sets: shared dictionary with (p, o)-pairs as key and item sets as value
+    :param cb_sets: shared list of tuples (CBS, s), with s being the similarity
+    :param queue: shared queue with slices from item_sets
     :param similarity_threshold: only generalize if the similarity exceeds this value
-    :param max_cbs_size: limit number of ES per CBS to this value
 
-    :returns: a list of tuples (CBS, s), with s being the similarity
+    :returns: None
     """
 
-    logger.info("Generating Common Behaviour Sets (sim >= {}, s <= {})".format(similarity_threshold,
-                                                                           max_cbs_size))
-    common_behavioural_sets = []
-    keys = list(item_sets.keys())
-    for i in range(len(keys)):
-        pa_0 = keys[i]
-        es_0 = frozenset(item_sets[pa_0])
-        for pa_1 in keys[i+1:]:
-            es_1 = frozenset(item_sets[pa_1])
-            similarity = _similarity_of(es_0, es_1)
-            if similarity < similarity_threshold:
-                continue
+    pid = multiprocessing.current_process()
+    logger.info("{} - Generating Common Behaviour Sets (sim >= {})".format(pid, similarity_threshold))
 
-            common_behavioural_sets.append((frozenset({
-                                              (es_0, pa_0),
-                                              (es_1, pa_1)}),
-                                              similarity))
-    _cbs_extender(common_behavioural_sets, similarity_threshold, max_cbs_size)
+    while True:
+        work = queue.get()
+        if work is None:
+            break
+ 
+        # if similarity_threshold <= 0, then (n*(n-1))/2 cb sets are generated
+        keys = list(item_sets.keys())
+        n = len(keys)
+        for i in work:
+            if i >= n:
+                break
 
-    logger.info("Generated {} Common Behaviour Sets".format(len(common_behavioural_sets)))
+            pa_0 = keys[i]
+            es_0 = frozenset(item_sets[pa_0])
+            for pa_1 in keys[i+1:]:
+                es_1 = frozenset(item_sets[pa_1])
+                similarity = _similarity_of(es_0, es_1)
+                if similarity < similarity_threshold:
+                    continue
 
-    return common_behavioural_sets
+                cb_sets.append((frozenset({
+                                        (es_0, pa_0),
+                                        (es_1, pa_1)}),
+                                similarity))
 
-def _cbs_extender(cbs_list=[], similarity_threshold=.75, max_cbs_size=sys.maxsize, _size=2):
+
+    logger.info("{} - Generated {} Common Behaviour Sets".format(pid, len(cb_sets)))
+
+def extend_common_behaviour_sets(cbs_list, similarity_threshold=.75, work=None):
     """ Recursively extend Common Behaviour Sets (CBS)
 
-    :param cbs_list: list of tuples tuples (CBS, s), with s being the similarity
+    :param cbs_list: shared list of tuples tuples (CBS, s), with s being the similarity
     :param similarity_threshold: only generalize if the similarity exceeds this value
-    :param max_cbs_size: limit number of ES per CBS to this value
+    :param work: range of cbs_list to focus on
 
-    :updates: original cbs_list
-    :returns: none
+    :returns: list of additions CB sets
     """
 
-    if len(cbs_list) <= 1 or max_cbs_size <= _size:
-        return cbs_list
+    if len(cbs_list) <= 1:
+        return []
 
+    pid = multiprocessing.current_process()
+    logger.info("{} - Extending Common Behaviour Sets (sim >= {})".format(pid, similarity_threshold))
     extended_cbs_list = []
-    for i in range(len(cbs_list)):
+    n = len(cbs_list)
+    for i in work:
+        if i >= n:
+            break
+
         cbs_0, _ = cbs_list[i]
         es_0 = frozenset.union(*[es for es, _ in cbs_0])
         for cbs_1, _ in cbs_list[i+1:]:
@@ -141,8 +158,8 @@ def _cbs_extender(cbs_list=[], similarity_threshold=.75, max_cbs_size=sys.maxsiz
 
             extended_cbs_list.append((frozenset.union(cbs_0, cbs_1), similarity))
 
-    cbs_list.extend(extended_cbs_list)
-    _cbs_extender(extended_cbs_list, similarity_threshold, max_cbs_size=max_cbs_size, _size=_size*2)
+    logger.info("{} - Extended with {} Common Behaviour Sets".format(pid, len(extended_cbs_list)))
+    return extended_cbs_list
 
 def _similarity_of(*list_of_element_sets):
     """ Calculate similarity between element sets
@@ -167,7 +184,8 @@ def _class_hierarchy_branches(instance_graph, ontology_graph, cbs):
 
     :returns: a dictionary with elements as keys and branches as (nested) lists
     """
-    logger.debug("Determining class hierarchy branches")
+    pid = multiprocessing.current_process()
+    logger.debug("{} - Determining class hierarchy branches".format(pid))
     element_branches = {}
     for es, _ in cbs:
         for e in es:
@@ -193,7 +211,8 @@ def _coverage_per_class(instance_graph, element_branches):
 
     :returns: a dictionary with class types as keys and (instances, local coverage) tuples as items
     """
-    logger.debug("Determining coverage per class")
+    pid = multiprocessing.current_process()
+    logger.debug("{} - Determining coverage per class".format(pid))
     coverage = {}
     for e in element_branches.keys():
         for ctype in instance_graph.graph.objects(e, RDF.type):
@@ -226,7 +245,8 @@ def _lowest_level_class(instance_graph=None, ontology_graph=None, cbs=frozenset(
     # determine coverage per class
     coverage = _coverage_per_class(instance_graph, element_branches)
 
-    logger.debug("Filtering LLC coverage")
+    pid = multiprocessing.current_process()
+    logger.debug("{} - Filtering LLC coverage".format(pid))
     sorted_keys = sorted(coverage, key=lambda k: len(coverage[k][0]), reverse=True)
     for i in range(1, len(sorted_keys)):
         # prever broader coverage
@@ -264,6 +284,31 @@ def _branch_traversal(ontology_graph, ctype, branch):
             _branch_traversal(ontology_graph, sclass, subbranch)
             branch.append(subbranch)
 
+def evaluate_rules(instance_graph, rules, queue, final_rule_set, minimal_support, minimal_confidence):
+    """ Evaluate suggested rule r given knowledge graph G on support and confidence
+
+    :param instance_graph: a knowledge graph instance
+    :param rules: shared list of semantic association rules as tuple (type, antecedent, consequent(s))
+    :param queue: slice of rules to focus on
+    :param final_rule_set: shared list of accepted rules
+    :param minimal_support: only accept rules with a higher support
+    :param minimal_confidence: only accept rules with a higher confidence
+
+    :returns: none
+    """
+    while True:
+        work = queue.get()
+        if work is None:
+            break
+
+        for rule in rules[work]:
+            support = support_of(instance_graph, rule)
+            confidence = confidence_of(instance_graph, rule)
+
+            if support >= minimal_support and\
+               confidence >= minimal_confidence:
+                final_rule_set.append((rule, support, confidence))
+
 def support_of(instance_graph, rule):
     """ Calculate the support for rule r given knowledge graph G
 
@@ -275,7 +320,8 @@ def support_of(instance_graph, rule):
     ctype = rule[0]
     p, o = rule[1]  # antecedent
 
-    logger.debug("Calculating support")
+    pid = multiprocessing.current_process()
+    logger.debug("{} - Calculating support".format(pid))
     number_of_supporting_facts = 0
     elements_of_type = frozenset(instance_graph.graph.subjects(RDF.type, ctype))
     for s in elements_of_type:
@@ -300,7 +346,8 @@ def confidence_of(instance_graph, rule):
     ctype = rule[0]
     p_0, o_0 = rule[1]  # antecedent
 
-    logger.debug("Calculating confidence")
+    pid = multiprocessing.current_process()
+    logger.debug("{} - Calculating confidence".format(pid))
     number_of_antecedent_supporting_facts = 0
     number_of_rule_supporting_facts = 0
     elements_of_type = frozenset(instance_graph.graph.subjects(RDF.type, ctype))
@@ -313,7 +360,8 @@ def confidence_of(instance_graph, rule):
             if (s, p_1, o_1) not in instance_graph.graph:
                 break
 
-        number_of_rule_supporting_facts += 1
+        else:
+            number_of_rule_supporting_facts += 1
 
     if number_of_antecedent_supporting_facts > 0:
         confidence = number_of_rule_supporting_facts / number_of_antecedent_supporting_facts

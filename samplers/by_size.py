@@ -28,8 +28,17 @@ def sample(knowledge_graph=None, patterns=[(None, None, None)], size=1, strict_s
                                               subject,
                                               size=size,
                                               strict_size=strict_size)
-                for fact in facts:
-                    kg.graph.add(fact)
+                type_present = False
+                for s, p, o in facts:
+                    kg.graph.add((s, p, o))
+
+                    if p == rdflib.RDF.type and s == subject:
+                        type_present = True
+
+                # type is required
+                if not type_present:
+                    for ctype in knowledge_graph.graph.objects(subject, rdflib.RDF.type):
+                        kg.graph.add((subject, rdflib.RDF.type, ctype))
 
     logger.info("Sample contains {} facts".format(len(kg.graph)))
     return kg
