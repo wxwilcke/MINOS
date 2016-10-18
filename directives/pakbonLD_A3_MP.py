@@ -10,7 +10,7 @@ import rdflib
 from .abstract_instruction_set import AbstractInstructionSet
 from readers import rdf
 from writers import rule_set, pickler
-from samplers import by_depth as sampler
+from samplers import by_neighbourhood as sampler
 from algorithms.semantic_rule_learning_mp import generate_semantic_association_rules,\
                                                  generate_semantic_item_sets,\
                                                  generate_common_behaviour_sets,\
@@ -42,7 +42,7 @@ class PakbonLD(AbstractInstructionSet):
                    rdflib.URIRef("http://purl.org/crmeh#EHE0007_Context"))
 
 
-        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], depth=parameters["depth"])
+        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], depth=parameters["sample_depth"])
 
         return (kg_i_sampled, kg_s)
 
@@ -61,7 +61,7 @@ class PakbonLD(AbstractInstructionSet):
 
         # generate semantic item sets from sampled graph
         triples = manager.list(kg_i.graph)
-        chunksize = floor(len(triples) / NUM_OF_WORKERS)
+        chunksize = max(1, floor(len(triples) / NUM_OF_WORKERS))
         slices = [slice(i, i+chunksize) for i in range(0, len(triples), chunksize)]
         batches = [triples[slc] for slc in slices]
         si_sets = manager.dict()
@@ -86,7 +86,7 @@ class PakbonLD(AbstractInstructionSet):
         # generate common behaviour sets
         work = manager.Queue()
         keys = list(si_sets.keys())
-        size = floor(len(keys) / NUM_OF_WORKERS)
+        size = max(1, floor(len(keys) / NUM_OF_WORKERS))
         slices = [range(i, i+size) for i in range(0, len(keys), size)]
 
         cbs_sets = manager.list()
@@ -117,7 +117,7 @@ class PakbonLD(AbstractInstructionSet):
         while cbs_size < parameters["max_cbs_size"]:
             func = partial(extend_common_behaviour_sets, cbs_sets_extended, parameters["similarity_threshold"])
 
-            chunksize = floor(len(cbs_sets_extended) / NUM_OF_WORKERS)
+            chunksize = max(1, floor(len(cbs_sets_extended) / NUM_OF_WORKERS))
             slices = [range(i, i+chunksize) for i in range(0, len(cbs_sets_extended), chunksize)]
             cbs_sets_extention = manager.list()
             with Pool(processes=NUM_OF_WORKERS) as pool:
@@ -138,7 +138,7 @@ class PakbonLD(AbstractInstructionSet):
         # generate semantic association rules
         rules = manager.list()
         work = manager.Queue()
-        size = floor(len(cbs_sets) / NUM_OF_WORKERS)
+        size = max(1, floor(len(cbs_sets) / NUM_OF_WORKERS))
         slices = [slice(i, i+size) for i in range(0, len(cbs_sets), size)]
 
         pool = []
@@ -167,7 +167,7 @@ class PakbonLD(AbstractInstructionSet):
         # calculate support and confidence, skip those not meeting minimum requirements
         final_rule_set = manager.list()
         work = manager.Queue()
-        size = floor(len(rules) / NUM_OF_WORKERS)
+        size = max(1, floor(len(rules) / NUM_OF_WORKERS))
         slices = [slice(i, i+size) for i in range(0, len(rules), size)]
 
         pool = []

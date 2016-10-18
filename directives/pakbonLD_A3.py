@@ -7,7 +7,7 @@ import rdflib
 from .abstract_instruction_set import AbstractInstructionSet
 from readers import rdf
 from writers import rule_set, pickler
-from samplers import by_depth as sampler
+from samplers import by_neighbourhood as sampler
 from algorithms.semantic_rule_learning import generate_semantic_association_rules,\
                                               generate_semantic_item_sets,\
                                               generate_common_behaviour_sets,\
@@ -36,7 +36,7 @@ class PakbonLD(AbstractInstructionSet):
                    rdflib.URIRef("http://purl.org/crmeh#EHE0007_Context"))
 
 
-        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], depth=parameters["depth"])
+        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], depth=parameters["sample_depth"])
 
         return (kg_i_sampled, kg_s)
 
