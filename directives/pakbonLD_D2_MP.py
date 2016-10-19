@@ -84,8 +84,7 @@ class PakbonLD(AbstractInstructionSet):
         # generate common behaviour sets
         work = manager.Queue()
         keys = list(si_sets.keys())
-        size = max(1, floor(len(keys) / NUM_OF_WORKERS))
-        slices = [range(i, i+size) for i in range(0, len(keys), size)]
+        slices = self.diagonal_matrix_slicer(keys)
 
         cbs_sets = manager.list()
         pool = []
@@ -115,8 +114,7 @@ class PakbonLD(AbstractInstructionSet):
         while cbs_size < parameters["max_cbs_size"]:
             func = partial(extend_common_behaviour_sets, cbs_sets_extended, parameters["similarity_threshold"])
 
-            chunksize = max(1, floor(len(cbs_sets_extended) / NUM_OF_WORKERS))
-            slices = [range(i, i+chunksize) for i in range(0, len(cbs_sets_extended), chunksize)]
+            slices = self.diagonal_matrix_slicer(cbs_sets_extended)
             cbs_sets_extention = manager.list()
             with Pool(processes=NUM_OF_WORKERS) as pool:
                 it = pool.imap_unordered(func=func, iterable=slices)
@@ -229,3 +227,21 @@ class PakbonLD(AbstractInstructionSet):
 
         if len(output) > 0:
             self.write_to_file(output_path, output)
+
+    def diagonal_matrix_slicer(self, items=[]):
+        slices = []
+        n = len(items)
+        total_work_load = sum(range(n))
+        avg_work_load = total_work_load / NUM_OF_WORKERS
+        work_load_start = n
+        work_load_end = work_load_start
+        while len(slices) < NUM_OF_WORKERS:
+            work_load = 0
+            while work_load < avg_work_load and work_load_start > 0:
+                work_load_start -= 1
+                work_load = sum(range(work_load_end, work_load_start, -1))
+
+            slices.append(range(n-work_load_end, n-work_load_start))
+            work_load_end = work_load_start
+
+        return slices
