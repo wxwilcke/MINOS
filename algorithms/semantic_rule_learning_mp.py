@@ -2,6 +2,7 @@
 
 import logging
 import multiprocessing
+from os import nice
 from rdflib.namespace import RDF, RDFS
 
 
@@ -30,6 +31,7 @@ Alterations:
 """
 
 logger = logging.getLogger(__name__)
+NICENESS = 1  # increment process niceness from main process niceness
 
 def generate_semantic_association_rules(instance_graph, ontology_graph, cbs_sets, queue, rules, minimal_local_support=1.0):
     """ Generate semantic association rules from CBS
@@ -44,6 +46,7 @@ def generate_semantic_association_rules(instance_graph, ontology_graph, cbs_sets
     :returns: None
     """
 
+    nice(NICENESS)
     pid = multiprocessing.current_process()
     logger.info("{} - Generating Semantic Association Rules (LS >= {})".format(pid, minimal_local_support))
     while True:
@@ -70,6 +73,7 @@ def generate_semantic_item_sets(instance_graph):
     :returns: dictionary with (p, o) pairs as keys and set of matching s as value
     """
 
+    nice(NICENESS)
     pid = multiprocessing.current_process()
     logger.info("{} - Generating Semantic Item Set".format(pid))
     d = {}
@@ -79,7 +83,7 @@ def generate_semantic_item_sets(instance_graph):
         if k in d.keys():
             d[k].add(s)
             continue
- 
+
         d[k] = {s}
 
     logger.info("{} - Generated {} Semantic Item Sets".format(pid, len(d)))
@@ -96,6 +100,7 @@ def generate_common_behaviour_sets(item_sets, cb_sets, queue, similarity_thresho
     :returns: None
     """
 
+    nice(NICENESS)
     pid = multiprocessing.current_process()
     logger.info("{} - Generating Common Behaviour Sets (sim >= {})".format(pid, similarity_threshold))
 
@@ -137,6 +142,7 @@ def extend_common_behaviour_sets(cbs_list, similarity_threshold=.75, work=None):
     :returns: list of additions CB sets
     """
 
+    nice(NICENESS)
     if len(cbs_list) <= 1:
         return []
 
@@ -296,6 +302,7 @@ def evaluate_rules(instance_graph, rules, queue, final_rule_set, minimal_support
 
     :returns: none
     """
+    nice(NICENESS)
     while True:
         work = queue.get()
         if work is None:

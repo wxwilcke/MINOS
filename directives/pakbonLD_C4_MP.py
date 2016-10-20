@@ -205,9 +205,9 @@ class PakbonLD(AbstractInstructionSet):
         print(" {}\n".format(self.time))
 
         parameters = {}
-        parameters["similarity_threshold"] = .6
+        parameters["similarity_threshold"] = .9
         parameters["max_cbs_size"] = 2
-        parameters["minimal_local_support"] = .8
+        parameters["minimal_local_support"] = .0
         parameters["minimal_support"] = 0.0
         parameters["minimal_confidence"] = 0.0
 

@@ -215,7 +215,7 @@ class PakbonLD(AbstractInstructionSet):
         print(" {}\n".format(self.time))
 
         parameters = {}
-        parameters["sample_depth"] = 4
+        parameters["sample_depth"] = 2
         parameters["similarity_threshold"] = .6
         parameters["max_cbs_size"] = 4
         parameters["minimal_local_support"] = 0.0
