@@ -303,6 +303,10 @@ def evaluate_rules(instance_graph, rules, queue, final_rule_set, minimal_support
     :returns: none
     """
     nice(NICENESS)
+    pid = multiprocessing.current_process()
+    logger.info("{} - Starting rule evaluation (sup >= {}, conf >= {}".format(pid, 
+                                                                              minimal_support,
+                                                                              minimal_confidence))
     while True:
         work = queue.get()
         if work is None:

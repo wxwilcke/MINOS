@@ -11,8 +11,8 @@ from .abstract_instruction_set import AbstractInstructionSet
 from readers import rdf
 from writers import rule_set, pickler
 from samplers import by_neighbourhood as sampler
+from algorithms.semantic_rule_learning import generate_semantic_item_sets
 from algorithms.semantic_rule_learning_mp import generate_semantic_association_rules,\
-                                                 generate_semantic_item_sets,\
                                                  generate_common_behaviour_sets,\
                                                  extend_common_behaviour_sets,\
                                                  evaluate_rules
@@ -60,6 +60,7 @@ class PakbonLD(AbstractInstructionSet):
         manager = Manager()
 
         # generate semantic item sets from sampled graph
+        """
         triples = manager.list(kg_i.graph)
         chunksize = max(1, floor(len(triples) / NUM_OF_WORKERS))
         slices = [slice(i, i+chunksize) for i in range(0, len(triples), chunksize)]
@@ -81,7 +82,9 @@ class PakbonLD(AbstractInstructionSet):
                         si_sets[k] = si_set[k]
                 except StopIteration:
                     break
+        """
 
+        si_sets = manager.dict(generate_semantic_item_sets(kg_i))
 
         # generate common behaviour sets
         work = manager.Queue()
@@ -207,7 +210,7 @@ class PakbonLD(AbstractInstructionSet):
         overwrite = False
 
         print(" Writing output to {}...".format(path))
-        rule_set.pretty_write(output, path, overwrite)
+        rule_set.pretty_write(output, path, overwrite, True)
         pickler.write(output, path+".pickle", overwrite)
 
     def run(self, abox, tbox, output_path):

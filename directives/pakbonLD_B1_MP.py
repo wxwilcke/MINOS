@@ -11,8 +11,8 @@ from .abstract_instruction_set import AbstractInstructionSet
 from readers import rdf
 from writers import rule_set, pickler
 from samplers import by_definition as sampler
+from algorithms.semantic_rule_learning import generate_semantic_item_sets
 from algorithms.semantic_rule_learning_mp import generate_semantic_association_rules,\
-                                                 generate_semantic_item_sets,\
                                                  generate_common_behaviour_sets,\
                                                  extend_common_behaviour_sets,\
                                                  evaluate_rules
@@ -111,29 +111,8 @@ class PakbonLD(AbstractInstructionSet):
         # MP manager
         manager = Manager()
 
-        # generate semantic item sets from sampled graph
-        triples = manager.list(kg_i.graph)
-        chunksize = max(1, floor(len(triples) / NUM_OF_WORKERS))
-        slices = [slice(i, i+chunksize) for i in range(0, len(triples), chunksize)]
-        batches = [triples[slc] for slc in slices]
-        si_sets = manager.dict()
-        with Pool(processes=NUM_OF_WORKERS) as pool:
-            it = pool.imap_unordered(func=generate_semantic_item_sets, iterable=batches)
-
-            while True:
-                try:
-                    # sync dicts
-                    si_set = next(it)
-                    for k in si_set.keys():
-                        if k in si_sets.keys():
-                            items = si_sets[k]
-                            items.update(si_set[k])
-                            si_sets[k] = items
-                            continue
-                        si_sets[k] = si_set[k]
-                except StopIteration:
-                    break
-
+        # generate semantic item sets from sampled graph 
+        si_sets = manager.dict(generate_semantic_item_sets(kg_i))
 
         # generate common behaviour sets
         work = manager.Queue()
@@ -185,7 +164,7 @@ class PakbonLD(AbstractInstructionSet):
             cbs_size *= 2
 
 
-        # generate semantic association rules
+        # generate semantic item sets from sampled graph association rules
         rules = manager.list()
         work = manager.Queue()
         size = max(1, floor(len(cbs_sets) / NUM_OF_WORKERS))
@@ -250,16 +229,19 @@ class PakbonLD(AbstractInstructionSet):
         # time took
         t1 = timer()
         dt = t1 - t0
+        self.logger.info("Program completed in {:.3f} ms".format(dt))
         print("  Program completed in {:.3f} ms".format(dt))
 
+        self.logger.info("Found {} rules".format(len(final_rule_set)))
         print("  Found {} rules".format(len(final_rule_set)))
         return final_rule_set
 
     def write_to_file(self, path="./of/latest", output=[]):
         overwrite = False
+        compress = True
 
         print(" Writing output to {}...".format(path))
-        rule_set.pretty_write(output, path, overwrite)
+        rule_set.pretty_write(output, path, overwrite, compress)
         pickler.write(output, path+".pickle", overwrite)
 
     def run(self, abox, tbox, output_path):
