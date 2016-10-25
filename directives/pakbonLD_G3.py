@@ -3,10 +3,8 @@
 import logging
 from operator import itemgetter
 from timeit import default_timer as timer
-import rdflib
 from .abstract_instruction_set import AbstractInstructionSet
 from readers import rdf
-from models.knowledge_graph import KnowledgeGraph
 from writers import rule_set, pickler
 from algorithms.semantic_rule_learning import generate_semantic_association_rules,\
                                               generate_semantic_item_sets,\
@@ -21,7 +19,7 @@ class PakbonLD(AbstractInstructionSet):
         self.logger = logging.getLogger(__name__)
 
     def print_header(self):
-        header = "PAKBON: All facts with literal and vocabulary objects only"
+        header = "PAKBON: All facts"
         print(header)
         print('-' * len(header))
 
@@ -30,19 +28,7 @@ class PakbonLD(AbstractInstructionSet):
         kg_i = rdf.read(local_path=abox)
         kg_s = rdf.read(local_path=tbox)
 
-        kg_i_sampled = KnowledgeGraph()
-        for s, p, o in kg_i.triples():
-            if type(o) is rdflib.Resource:
-                for ctype in kg_i_sampled.graph.objects(o, rdflib.type):
-                    if ctype == rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/E55_Type") or\
-                       ctype == rdflib.URIRef("http://www.w3.org/2004/02/skos/core#Concept"):
-                        kg_i_sampled.graph.add((s, p, o))
-                        break
-
-                continue
-            kg_i_sampled.graph.add((s,p,o))
-
-        return (kg_i_sampled, kg_s)
+        return (kg_i, kg_s)
 
     def run_program(self, dataset, hyperparameters):
         self.logger.info("Starting run\nParameters:\n{}".format(
@@ -102,7 +88,7 @@ class PakbonLD(AbstractInstructionSet):
         hyperparameters = {}
         hyperparameters["similarity_threshold"] = .8
         hyperparameters["max_cbs_size"] = 2
-        hyperparameters["minimal_local_support"] = .5
+        hyperparameters["minimal_local_support"] = .2
         hyperparameters["minimal_support"] = 0.0
         hyperparameters["minimal_confidence"] = 0.0
 

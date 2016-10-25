@@ -8,9 +8,9 @@ from math import floor
 from timeit import default_timer as timer
 import rdflib
 from .abstract_instruction_set import AbstractInstructionSet
+from models.knowledge_graph import KnowledgeGraph
 from readers import rdf
 from writers import rule_set, pickler
-from samplers import by_definition as sampler
 from algorithms.semantic_rule_learning import generate_semantic_item_sets
 from algorithms.semantic_rule_learning_mp import generate_semantic_association_rules,\
                                                  generate_common_behaviour_sets,\
@@ -27,79 +27,20 @@ class PakbonLD(AbstractInstructionSet):
         self.logger = logging.getLogger(__name__)
 
     def print_header(self):
-        header = "PAKBON: Artefacts with 17 attributes"
+        header = "PAKBON: All facts with resources only"
         print(header)
         print('-' * len(header))
 
     def load_dataset(self, abox, tbox):
-        """
-        # pakbonLD SPARQL endpoint
-        endpoint = "http://pakbon-ld.spider.d2s.labs.vu.nl/sparql/"
-
-        # query
-        query_string = "" "
-            prefix pbont: <http://pakbon-ld.spider.d2s.labs.vu.nl/ont/>
-            prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-
-            SELECT DISTINCT ?s ?p ?o
-            WHERE {
-             ?s a pbont:SIKB0102S_Vondstcontext;
-                ?p ?o.
-             FILTER (?p != rdf:type)
-             } LIMIT 1000"" "
-
-        # perform query and return a KnowledgeGraph instance
-        kg_i = rdf.query(query_string, endpoint)
-        """
-
         # read graphs
         kg_i = rdf.read(local_path=abox)
         kg_s = rdf.read(local_path=tbox)
 
-        # sample by pattern
-        pattern = (None,
-                   rdflib.RDF.type,
-                   rdflib.URIRef("http://purl.org/crmeh#EHE0009_ContextFind"))
-
-        # define context
-        # spoor with vulling
-        context = [rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_artefacttype"),
-                   rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_exposabel"),
-                   rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_geconserveerd"),
-                   rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_gedeselecteerd"),
-                   rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_materiaalcategorie"),
-                   rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P3_has_note"),
-                   (rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_gewicht"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P90_has_value")),
-                   (rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_gewicht"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P91_has_unit")),
-                   (rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_aantal"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P90_has_value")),
-                   (rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_aantal"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P91_has_unit")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46i_forms_part_of"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_verzamelwijze")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P140i_was_attributed_by"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P141_assigned"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_beginperiode")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P140i_was_attributed_by"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P141_assigned"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_eindperiode")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46i_forms_part_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46i_forms_part_of"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_bewaarTemperatuur")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46i_forms_part_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46i_forms_part_of"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_bewaarVochtigheid")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46i_forms_part_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46i_forms_part_of"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_breekbaar")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46i_forms_part_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46i_forms_part_of"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_lichtgevoelig"))]
-
-
-        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], context=context)
+        kg_i_sampled = KnowledgeGraph()
+        for s, p, o in kg_i.triples():
+            if type(o) is rdflib.Literal:
+                continue
+            kg_i_sampled.graph.add((s,p,o))
 
         return (kg_i_sampled, kg_s)
 
@@ -234,19 +175,16 @@ class PakbonLD(AbstractInstructionSet):
         # time took
         t1 = timer()
         dt = t1 - t0
-        self.logger.info("Program completed in {:.3f} ms".format(dt))
         print("  Program completed in {:.3f} ms".format(dt))
 
-        self.logger.info("Found {} rules".format(len(final_rule_set)))
         print("  Found {} rules".format(len(final_rule_set)))
         return final_rule_set
 
     def write_to_file(self, path="./of/latest", output=[]):
         overwrite = False
-        compress = True
 
         print(" Writing output to {}...".format(path))
-        rule_set.pretty_write(output, path, overwrite, compress)
+        rule_set.pretty_write(output, path, overwrite, True)
         pickler.write(output, path+".pickle", overwrite)
 
     def run(self, abox, tbox, output_path):
@@ -255,8 +193,8 @@ class PakbonLD(AbstractInstructionSet):
 
         parameters = {}
         parameters["similarity_threshold"] = .9
-        parameters["max_cbs_size"] = 4
-        parameters["minimal_local_support"] = 0.0
+        parameters["max_cbs_size"] = 2
+        parameters["minimal_local_support"] = .8
         parameters["minimal_support"] = 0.0
         parameters["minimal_confidence"] = 0.0
 

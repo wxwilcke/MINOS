@@ -21,7 +21,7 @@ class PakbonLD(AbstractInstructionSet):
         self.logger = logging.getLogger(__name__)
 
     def print_header(self):
-        header = "PAKBON: All facts with literal and vocabulary objects only"
+        header = "PAKBON: All facts with resources only"
         print(header)
         print('-' * len(header))
 
@@ -32,13 +32,7 @@ class PakbonLD(AbstractInstructionSet):
 
         kg_i_sampled = KnowledgeGraph()
         for s, p, o in kg_i.triples():
-            if type(o) is rdflib.Resource:
-                for ctype in kg_i_sampled.graph.objects(o, rdflib.type):
-                    if ctype == rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/E55_Type") or\
-                       ctype == rdflib.URIRef("http://www.w3.org/2004/02/skos/core#Concept"):
-                        kg_i_sampled.graph.add((s, p, o))
-                        break
-
+            if type(o) is rdflib.Literal:
                 continue
             kg_i_sampled.graph.add((s,p,o))
 
@@ -102,7 +96,7 @@ class PakbonLD(AbstractInstructionSet):
         hyperparameters = {}
         hyperparameters["similarity_threshold"] = .8
         hyperparameters["max_cbs_size"] = 2
-        hyperparameters["minimal_local_support"] = .5
+        hyperparameters["minimal_local_support"] = .2
         hyperparameters["minimal_support"] = 0.0
         hyperparameters["minimal_confidence"] = 0.0
 
