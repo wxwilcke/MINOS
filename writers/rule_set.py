@@ -1,8 +1,7 @@
 #!/usr/bin/python3
 
 import logging
-import tarfile
-import io
+from writers.auxiliarly import write
 
 
 logger = logging.getLogger(__name__)
@@ -17,17 +16,8 @@ def pretty_write(output=[], path="./of/latest", overwrite=True, compress=False):
 
     :returns: none
     """
-    buff = ""
-    for rule in output:
-        buff += _rule_to_string(rule) + "\n"
-    buff += "<EOF>"
 
-    mode = 'w' if overwrite else 'x'
-    logger.info("Writing rules (mode {}, compress = {}) to {}".format(mode, compress, path))
-    if compress:
-        _tar_write(buff, path+".tar", mode+":bz2")
-    else:
-        _raw_write(buff, path, mode)
+    write(output, path, overwrite, compress, _rule_to_string)
 
 def _rule_to_string(irule):
     """ Wrap a rule into a pretty string
@@ -53,14 +43,3 @@ def _rule_to_string(irule):
                               irule[2])
 
     return string
-
-def _raw_write(buff, path, mode):
-    with open(path, mode) as f:
-        f.write(buff)
-
-def _tar_write(buff, path, mode):
-    info = tarfile.TarInfo(name="rule_set")
-    info.size = len(buff)
-    info.type = tarfile.REGTYPE
-    with tarfile.open(path, mode) as t:
-        t.addfile(tarinfo=info, fileobj=io.BytesIO(buff.encode('utf8')))

@@ -12,7 +12,10 @@ def run(args, time):
     klass = getattr(mod, *directive[-1:])
 
     program = klass(time)
-    program.run(args.abox, args.tbox, args.output)
+    if args.model is None:
+        program.run(args.abox, args.tbox, args.output, args.interactive)
+    else:
+        program.run(args.abox, args.model, args.output, args.interactive)
 
 def print_header():
     header = 'An Experimental Pipeline for Data Mining on Linked Archaeological Data'
@@ -32,13 +35,15 @@ if __name__ == "__main__":
     time = datetime.now().isoformat()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--abox", help="ABox graph", default="./if/instance_graph.ttl")
+    parser.add_argument("-i", "--interactive", help="Interactive mode", action="store_true")
     parser.add_argument("-t", "--tbox", help="TBox graph", default="./if/ontology_graph.ttl")
     parser.add_argument("-o", "--output", help="output path", default="./of/output-{}".format(time))
     parser.add_argument("-v", "--verbose", help="increase output verbosity",
                                             action="store_true")
     required_parser = parser.add_argument_group('required arguments')
+    required_parser.add_argument("-a", "--abox", help="ABox graph", default="./if/instance_graph.ttl")
     required_parser.add_argument("-d", "--directive", help="directive", default=None)
+    required_parser.add_argument("-m", "--model", help="Rule-based model", default=None)
     args = parser.parse_args()
 
     if args.directive is None:
