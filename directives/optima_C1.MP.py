@@ -21,13 +21,13 @@ from algorithms.semantic_rule_learning_mp import generate_semantic_association_r
 NUM_CORES_PER_CPU = 2
 NUM_OF_WORKERS = cpu_count() * NUM_CORES_PER_CPU
 
-class PakbonLD(AbstractInstructionSet):
+class Directive(AbstractInstructionSet):
     def __init__(self, time=""):
         self.time = time
         self.logger = logging.getLogger(__name__)
 
     def print_header(self):
-        header = "PAKBON: Projects with 17 attributes"
+        header = "OPTIMA: Context Events with 3 attributes"
         print(header)
         print('-' * len(header))
 
@@ -39,50 +39,19 @@ class PakbonLD(AbstractInstructionSet):
         # sample by pattern
         pattern = (None,
                    rdflib.RDF.type,
-                   rdflib.URIRef("http://purl.org/crmeh#EHE0001_EHProject"))
+                   rdflib.URIRef("http://purl.org/crmeh#EHE1001_ContextEvent"))
 
         # define context
         # spoor with vulling
-        context = [rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_onderzoektype"),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P7_took_place_at"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_gemeentecode")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P7_took_place_at"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_plaatscode")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P7_took_place_at"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_provinciecode")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P7_took_place_at"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_toponiem")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P7_took_place_at"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_vindplaatstype")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P7_took_place_at"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P4_has_time-span"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_beginperiode")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P7_took_place_at"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P4_has_time-span"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_eindperiode")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P9_consists_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P108_has_produced"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46_is_composed_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46_is_composed_of"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_artefacttype")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P9_consists_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P108_has_produced"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46_is_composed_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46_is_composed_of"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_materiaalcategorie")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P9_consists_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P108_has_produced"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46_is_composed_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46_is_composed_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46i_forms_part_of"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_verzamelwijze")),
-                   (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P9_consists_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P108_has_produced"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46_is_composed_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46_is_composed_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46i_forms_part_of"),
-                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P53_has_former_or_current_location"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_contexttype"))]
+        context = [rdflib.URIRef("http://purl.org/dc/elements/1.1/source"),
+                   [rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P4F_has_time-span"),
+                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P1F_is_identified_by"),
+                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P2F_has_type"),
+                    rdflib.RDF.value],
+                   [rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P7F_witnessed"),
+                    rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P2F_has_type"),
+                    rdflib.RDF.value]]
+
 
         kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], context=context, strict_context=False)
 
@@ -241,9 +210,9 @@ class PakbonLD(AbstractInstructionSet):
         parameters = {}
         parameters["similarity_threshold"] = .9
         parameters["max_cbs_size"] = 2
-        parameters["minimal_local_support"] = 0.0
+        parameters["minimal_local_support"] = 0.7
         parameters["minimal_support"] = 0.0
-        parameters["minimal_confidence"] = 0.0
+        parameters["minimal_confidence"] = 0.5
 
         print(" Importing Data Sets...")
         dataset = self.load_dataset(abox, tbox)

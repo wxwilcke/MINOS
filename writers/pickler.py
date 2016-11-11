@@ -6,7 +6,7 @@ import pickle
 
 logger = logging.getLogger(__name__)
 
-def write(output=[], path="./of/latest.pickle", overwrite=True):
+def write(output, path="./of/latest.pickle", overwrite=True):
     """ Dump via pickle
 
     :param output: a list of rules

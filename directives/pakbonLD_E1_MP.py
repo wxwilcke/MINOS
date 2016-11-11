@@ -36,10 +36,10 @@ class PakbonLD(AbstractInstructionSet):
         kg_i = rdf.read(local_path=abox)
         kg_s = rdf.read(local_path=tbox)
 
-        kg_i_sampled = KnowledgeGraph()
+        kg_i_sampled = KnowledgeGraph(rdflib.Graph())
         for s, p, o in kg_i.triples():
-            if type(o) is rdflib.Resource:
-                for ctype in kg_i_sampled.graph.objects(o, rdflib.type):
+            if type(o) is rdflib.term.URIRef:
+                for ctype in kg_i_sampled.graph.objects(o, rdflib.RDF.type):
                     if ctype == rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/E55_Type") or\
                        ctype == rdflib.URIRef("http://www.w3.org/2004/02/skos/core#Concept"):
                         kg_i_sampled.graph.add((s, p, o))

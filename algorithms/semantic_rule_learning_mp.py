@@ -2,8 +2,8 @@
 
 import logging
 import multiprocessing
-from os import nice
 from rdflib.namespace import RDF, RDFS
+from models.rule_base import IRule, Rule
 
 
 """
@@ -31,7 +31,6 @@ Alterations:
 """
 
 logger = logging.getLogger(__name__)
-NICENESS = 1  # increment process niceness from main process niceness
 
 def generate_semantic_association_rules(instance_graph, ontology_graph, cbs_sets, queue, rules, minimal_local_support=1.0):
     """ Generate semantic association rules from CBS
@@ -46,7 +45,6 @@ def generate_semantic_association_rules(instance_graph, ontology_graph, cbs_sets
     :returns: None
     """
 
-    nice(NICENESS)
     pid = multiprocessing.current_process()
     logger.info("{} - Generating Semantic Association Rules (LS >= {})".format(pid, minimal_local_support))
     while True:
@@ -61,7 +59,7 @@ def generate_semantic_association_rules(instance_graph, ontology_graph, cbs_sets
 
                 cbs_list = list(cbs)
                 for i in range(len(cbs_list)):
-                    rules.append((ctype, cbs_list[i][1], [pa for _, pa in cbs_list[:i]+cbs_list[i+1:]]))
+                    rules.append(Rule(ctype, cbs_list[i][1], [pa for _, pa in cbs_list[:i]+cbs_list[i+1:]]))
 
     logger.info("{} - Generated {} Semantic Association Rules".format(pid, len(rules)))
 
@@ -73,7 +71,6 @@ def generate_semantic_item_sets(instance_graph):
     :returns: dictionary with (p, o) pairs as keys and set of matching s as value
     """
 
-    nice(NICENESS)
     pid = multiprocessing.current_process()
     logger.info("{} - Generating Semantic Item Set".format(pid))
     d = {}
@@ -100,7 +97,6 @@ def generate_common_behaviour_sets(item_sets, cb_sets, queue, similarity_thresho
     :returns: None
     """
 
-    nice(NICENESS)
     pid = multiprocessing.current_process()
     logger.info("{} - Generating Common Behaviour Sets (sim >= {})".format(pid, similarity_threshold))
 
@@ -108,7 +104,7 @@ def generate_common_behaviour_sets(item_sets, cb_sets, queue, similarity_thresho
         work = queue.get()
         if work is None:
             break
- 
+
         # if similarity_threshold <= 0, then (n*(n-1))/2 cb sets are generated
         keys = list(item_sets.keys())
         n = len(keys)
@@ -142,7 +138,6 @@ def extend_common_behaviour_sets(cbs_list, similarity_threshold=.75, work=None):
     :returns: list of additions CB sets
     """
 
-    nice(NICENESS)
     if len(cbs_list) <= 1:
         return []
 
@@ -302,7 +297,6 @@ def evaluate_rules(instance_graph, rules, queue, final_rule_set, minimal_support
 
     :returns: none
     """
-    nice(NICENESS)
     pid = multiprocessing.current_process()
     logger.info("{} - Starting rule evaluation (sup >= {}, conf >= {}".format(pid, 
                                                                               minimal_support,
@@ -318,7 +312,7 @@ def evaluate_rules(instance_graph, rules, queue, final_rule_set, minimal_support
 
             if support >= minimal_support and\
                confidence >= minimal_confidence:
-                final_rule_set.append((rule, support, confidence))
+                final_rule_set.append(IRule(rule, support, confidence))
 
 def support_of(instance_graph, rule):
     """ Calculate the support for rule r given knowledge graph G
@@ -328,13 +322,12 @@ def support_of(instance_graph, rule):
 
     :returns: support value between 0 and 1
     """
-    ctype = rule[0]
-    p, o = rule[1]  # antecedent
+    p, o = rule.antecedent  # antecedent
 
     pid = multiprocessing.current_process()
     logger.debug("{} - Calculating support".format(pid))
     number_of_supporting_facts = 0
-    elements_of_type = frozenset(instance_graph.graph.subjects(RDF.type, ctype))
+    elements_of_type = frozenset(instance_graph.graph.subjects(RDF.type, rule.ctype))
     for s in elements_of_type:
         if (s, p, o) in instance_graph.graph:
             number_of_supporting_facts += 1
@@ -354,20 +347,19 @@ def confidence_of(instance_graph, rule):
 
     :returns: confidence value between 0 and 1
     """
-    ctype = rule[0]
-    p_0, o_0 = rule[1]  # antecedent
+    p_0, o_0 = rule.antecedent  # antecedent
 
     pid = multiprocessing.current_process()
     logger.debug("{} - Calculating confidence".format(pid))
     number_of_antecedent_supporting_facts = 0
     number_of_rule_supporting_facts = 0
-    elements_of_type = frozenset(instance_graph.graph.subjects(RDF.type, ctype))
+    elements_of_type = frozenset(instance_graph.graph.subjects(RDF.type, rule.ctype))
     for s in elements_of_type:
         if (s, p_0, o_0) not in instance_graph.graph:
             continue
 
         number_of_antecedent_supporting_facts += 1
-        for p_1, o_1 in rule[2]:  # consequent
+        for p_1, o_1 in rule.consequent:  # consequent
             if (s, p_1, o_1) not in instance_graph.graph:
                 break
 

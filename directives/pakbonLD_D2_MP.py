@@ -75,7 +75,7 @@ class PakbonLD(AbstractInstructionSet):
                     rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46_is_composed_of"),
                     rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46_is_composed_of"),
                     rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46i_forms_part_of"),
-                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_verzamelwijze"))
+                    rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_verzamelwijze")),
                    (rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P9_consists_of"),
                     rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P108_has_produced"),
                     rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P46_is_composed_of"),
@@ -84,7 +84,7 @@ class PakbonLD(AbstractInstructionSet):
                     rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P53_has_former_or_current_location"),
                     rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_contexttype"))]
 
-        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], context=context)
+        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], context=context, strict_context=False)
 
         return (kg_i_sampled, kg_s)
 
@@ -240,7 +240,7 @@ class PakbonLD(AbstractInstructionSet):
 
         parameters = {}
         parameters["similarity_threshold"] = .6
-        parameters["max_cbs_size"] = 4
+        parameters["max_cbs_size"] = 2
         parameters["minimal_local_support"] = 0.0
         parameters["minimal_support"] = 0.0
         parameters["minimal_confidence"] = 0.0

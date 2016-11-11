@@ -3,6 +3,7 @@
 import logging
 import tarfile
 import io
+import re
 
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ def _raw_write(buff, path, mode):
         f.write(buff)
 
 def _tar_write(buff, path, mode):
-    info = tarfile.TarInfo(name="output_file")
+    info = tarfile.TarInfo(name=re.match('.*/(.*).tar', path).group(1))
     info.size = len(buff)
     info.type = tarfile.REGTYPE
     with tarfile.open(path, mode) as t:

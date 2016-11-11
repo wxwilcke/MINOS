@@ -143,7 +143,7 @@ class PakbonLD(AbstractInstructionSet):
         rule_set.pretty_write(output, path, overwrite)
         pickler.write(output, path+".pickle", overwrite)
 
-    def run(self, abox, tbox, output_path):
+    def run(self, abox, tbox, output_path, Interactive):
         self.print_header()
         print(" {}\n".format(self.time))
 

@@ -3,6 +3,7 @@
 import sys
 import logging
 from rdflib.namespace import RDF, RDFS
+from models.rule_base import RuleBase, IRule, Rule
 
 
 """
@@ -43,7 +44,7 @@ def generate_semantic_association_rules(instance_graph=None, ontology_graph=None
     """
 
     logger.info("Generating Semantic Association Rules (LS >= {})".format(minimal_local_support))
-    rules = []
+    rules = RuleBase()
     for cbs, _ in list_of_cbs:
         for ctype, (coverage, local_support) in _lowest_level_class(instance_graph, ontology_graph, cbs).items():
             if local_support < minimal_local_support:
@@ -51,7 +52,8 @@ def generate_semantic_association_rules(instance_graph=None, ontology_graph=None
 
             cbs_list = list(cbs)
             for i in range(len(cbs_list)):
-                rules.append((ctype, cbs_list[i][1], [pa for _, pa in cbs_list[:i]+cbs_list[i+1:]]))
+                rule = Rule(ctype, cbs_list[i][1], [pa for _, pa in cbs_list[:i]+cbs_list[i+1:]])
+                rules.add(IRule(rule, support_of(instance_graph, rule), confidence_of(instance_graph, rule)))
 
     logger.info("Generated {} Semantic Association Rules".format(len(rules)))
 

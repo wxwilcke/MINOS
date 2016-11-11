@@ -6,7 +6,7 @@ from writers.auxiliarly import write
 
 logger = logging.getLogger(__name__)
 
-def pretty_write(output=[], path="./of/latest", overwrite=True, compress=False):
+def pretty_write(output, path="./of/latest", overwrite=True, compress=False):
     """ Pretty print a rule set
 
     :param output: a list of rules
@@ -17,7 +17,7 @@ def pretty_write(output=[], path="./of/latest", overwrite=True, compress=False):
     :returns: none
     """
 
-    write(output, path, overwrite, compress, _rule_to_string)
+    write(output.model, path, overwrite, compress, _rule_to_string)
 
 def _rule_to_string(irule):
     """ Wrap a rule into a pretty string
@@ -26,20 +26,20 @@ def _rule_to_string(irule):
 
     :returns: a string
     """
-    consequent = """{}""".format(irule[0][2][0])
-    if len(irule[0][2]) > 1:
+    consequent = """{}""".format(irule.rule.consequent[0])
+    if len(irule.rule.consequent) > 1:
         consequent += """\n\tAND  """\
-                    + """\n\tAND  """.join(["{}".format(irule[0][2][i])\
-                                            for i in range(1, len(irule[0][2]))])
+                    + """\n\tAND  """.join(["{}".format(irule.rule.consequent[i])\
+                                            for i in range(1, len(irule.rule.consequent))])
 
     string = """[{}]
     IF   {}
     THEN {}
     Support:    {:.3f}
-    Confidence: {:.3f}\n""".format(irule[0][0],
-                              irule[0][1],
+    Confidence: {:.3f}\n""".format(irule.rule.ctype,
+                              irule.rule.antecedent,
                               consequent,
-                              irule[1],
-                              irule[2])
+                              irule.support,
+                              irule.confidence)
 
     return string

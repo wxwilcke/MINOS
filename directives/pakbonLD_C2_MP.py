@@ -99,7 +99,7 @@ class PakbonLD(AbstractInstructionSet):
                     rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_lichtgevoelig"))]
 
 
-        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], context=context)
+        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], context=context, strict_context=False)
 
         return (kg_i_sampled, kg_s)
 

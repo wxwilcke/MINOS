@@ -36,7 +36,7 @@ class PakbonLD(AbstractInstructionSet):
         kg_i = rdf.read(local_path=abox)
         kg_s = rdf.read(local_path=tbox)
 
-        kg_i_sampled = KnowledgeGraph()
+        kg_i_sampled = KnowledgeGraph(rdflib.Graph())
         for s, p, o in kg_i.triples():
             if type(o) is rdflib.Literal:
                 continue
@@ -192,9 +192,9 @@ class PakbonLD(AbstractInstructionSet):
         print(" {}\n".format(self.time))
 
         parameters = {}
-        parameters["similarity_threshold"] = .9
+        parameters["similarity_threshold"] = .6
         parameters["max_cbs_size"] = 2
-        parameters["minimal_local_support"] = .5
+        parameters["minimal_local_support"] = .8
         parameters["minimal_support"] = 0.0
         parameters["minimal_confidence"] = 0.0
 

@@ -93,7 +93,7 @@ class PakbonLD(AbstractInstructionSet):
                     rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P141_assigned"),
                     rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_eindperiode"))]
 
-        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], context=context)
+        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], context=context, strict_context=False)
 
         return (kg_i_sampled, kg_s)
 
@@ -245,7 +245,7 @@ class PakbonLD(AbstractInstructionSet):
         print(" {}\n".format(self.time))
 
         parameters = {}
-        parameters["similarity_threshold"] = .8
+        parameters["similarity_threshold"] = .9
         parameters["max_cbs_size"] = 4
         parameters["minimal_local_support"] = 0.0
         parameters["minimal_support"] = 0.0

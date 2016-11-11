@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import logging
-from operator import itemgetter
 from multiprocessing import Process, Manager, Pool, cpu_count
 from functools import partial
 from math import floor
@@ -10,6 +9,8 @@ import rdflib
 from .abstract_instruction_set import AbstractInstructionSet
 from readers import rdf
 from writers import rule_set, pickler
+from models.rule_base import RuleBase
+from ui import rule_evaluator
 from samplers import by_definition as sampler
 from algorithms.semantic_rule_learning import generate_semantic_item_sets
 from algorithms.semantic_rule_learning_mp import generate_semantic_association_rules,\
@@ -32,26 +33,6 @@ class PakbonLD(AbstractInstructionSet):
         print('-' * len(header))
 
     def load_dataset(self, abox, tbox):
-        """
-        # pakbonLD SPARQL endpoint
-        endpoint = "http://pakbon-ld.spider.d2s.labs.vu.nl/sparql/"
-
-        # query
-        query_string = "" "
-            prefix pbont: <http://pakbon-ld.spider.d2s.labs.vu.nl/ont/>
-            prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-
-            SELECT DISTINCT ?s ?p ?o
-            WHERE {
-             ?s a pbont:SIKB0102S_Vondstcontext;
-                ?p ?o.
-             FILTER (?p != rdf:type)
-             } LIMIT 1000"" "
-
-        # perform query and return a KnowledgeGraph instance
-        kg_i = rdf.query(query_string, endpoint)
-        """
-
         # read graphs
         kg_i = rdf.read(local_path=abox)
         kg_s = rdf.read(local_path=tbox)
@@ -94,7 +75,7 @@ class PakbonLD(AbstractInstructionSet):
                     rdflib.URIRef("http://www.cidoc-crm.org/cidoc-crm/P141_assigned"),
                     rdflib.URIRef("http://pakbon-ld.spider.d2s.labs.vu.nl/ont/SIKB0102S_eindperiode"))]
 
-        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], context=context)
+        kg_i_sampled = kg_i.sample(sampler, patterns=[pattern], context=context, strict_context=True)
 
         return (kg_i_sampled, kg_s)
 
@@ -224,7 +205,11 @@ class PakbonLD(AbstractInstructionSet):
 
 
         # sorting rules on both support and confidence
-        final_rule_set.sort(key=itemgetter(2, 1), reverse=True)
+        rule_base = RuleBase()
+        for rule in final_rule_set:
+            rule_base.add(rule)
+
+        rule_base.sort(by_confidence=True)
 
         # time took
         t1 = timer()
@@ -232,9 +217,9 @@ class PakbonLD(AbstractInstructionSet):
         self.logger.info("Program completed in {:.3f} ms".format(dt))
         print("  Program completed in {:.3f} ms".format(dt))
 
-        self.logger.info("Found {} rules".format(len(final_rule_set)))
-        print("  Found {} rules".format(len(final_rule_set)))
-        return final_rule_set
+        self.logger.info("Found {} rules".format(rule_base.size()))
+        print("  Found {} rules".format(rule_base.size()))
+        return rule_base
 
     def write_to_file(self, path="./of/latest", output=[]):
         overwrite = False
@@ -244,7 +229,7 @@ class PakbonLD(AbstractInstructionSet):
         rule_set.pretty_write(output, path, overwrite, compress)
         pickler.write(output, path+".pickle", overwrite)
 
-    def run(self, abox, tbox, output_path):
+    def run(self, abox, tbox, output_path, interactive):
         self.print_header()
         print(" {}\n".format(self.time))
 
@@ -261,7 +246,9 @@ class PakbonLD(AbstractInstructionSet):
         print(" Initiated Pattern Learning...")
         output = self.run_program(dataset, parameters)
 
-        if len(output) > 0:
+        if interactive:
+           output = rule_evaluator.cli(output)
+        elif output.size() > 0:
             self.write_to_file(output_path, output)
 
     def diagonal_matrix_slicer(self, items=[]):

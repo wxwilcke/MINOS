@@ -36,7 +36,7 @@ class PakbonLD(AbstractInstructionSet):
         kg_i = rdf.read(local_path=abox)
         kg_s = rdf.read(local_path=tbox)
 
-        kg_i_sampled = KnowledgeGraph()
+        kg_i_sampled = KnowledgeGraph(rdflib.Graph())
         for s, p, o in kg_i.triples():
             if type(o) is rdflib.Literal:
                 continue

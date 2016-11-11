@@ -2,6 +2,7 @@
 
 import logging
 from writers.fact_set import _fact_to_string
+from ui.auxiliarly import clear_term
 from ui.font import Font
 
 
@@ -16,6 +17,7 @@ def cli(facts=[]):
     print()
     n = len(facts)
     for i in range(n):
+        clear_term()
         if dump is True:
             output.append(facts[i])
             continue
