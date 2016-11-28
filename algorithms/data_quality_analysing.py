@@ -2,15 +2,20 @@
 
 import logging
 from rdflib import RDF
+from auxiliarly.progress_indicator import ProgressIndicator
 
 logger = logging.getLogger(__name__)
 
 def check(instance_graph, model, show_progress=True):
+    pi = ProgressIndicator(after=" Checking {} rules ".format(model.size()))
+
     logger.info("Checking {} rules".format(model.size()))
     anomalies = []
     for irule in model.irules():
+        pi.call()
         anomalies.extend(_test_rule(instance_graph, irule.rule))
 
+    pi.end()
     logger.info("Found {} anomalies".format(len(anomalies)))
     return anomalies
 

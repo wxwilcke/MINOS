@@ -54,3 +54,5 @@ class Inspector():
 
         if len(output) > 0:
             self.write_to_file(output_path, output)
+        else:
+            print(" No anomalies found")

@@ -3,26 +3,16 @@
 import logging
 import argparse
 from datetime import datetime
-from readers import pickler
-from auxiliarly import data_quality_analyser
-from ui import rule_evaluator
 
 
 def run(args, time):
-    if args.model is None:
-        directive = args.directive.split('.')
+    directive = args.directive.split('.')
 
-        mod = __import__('.'.join(directive[:-1]), fromlist=[directive[-1:]])
-        klass = getattr(mod, *directive[-1:])
+    mod = __import__('.'.join(directive[:-1]), fromlist=[directive[-1:]])
+    klass = getattr(mod, *directive[-1:])
 
-        program = klass(time)
-        program.run(args.abox, args.tbox, args.output, args.interactive)
-    else:
-        if args.abox is None:
-            rule_evaluator.cli(pickler.read(args.model))
-        else:
-            dqa = data_quality_analyser.Inspector(time)
-            dqa.run(args.abox, args.model, args.output, args.interactive)
+    program = klass(time)
+    program.run(args.abox, args.tbox, args.output, args.interactive)
 
 def print_header():
     header = 'An Experimental Pipeline for Data Mining on Linked Archaeological Data'
@@ -45,7 +35,6 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--abox", help="ABox graph", default=None)
     parser.add_argument("-d", "--directive", help="Directive for rule learning", default=None)
     parser.add_argument("-i", "--interactive", help="Interactive mode", action="store_true")
-    parser.add_argument("-m", "--model", help="Rule-based model", default=None)
     parser.add_argument("-o", "--output", help="output path", default="./of/output-{}".format(time))
     parser.add_argument("-t", "--tbox", help="TBox graph", default=None)
     parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")

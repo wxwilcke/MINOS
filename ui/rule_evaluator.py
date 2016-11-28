@@ -3,6 +3,7 @@
 import logging
 from models.rule_base import RuleBase
 from writers.rule_set import pretty_write, _rule_to_string
+from writers.pickler import write
 from ui.auxiliarly import clear_term
 from ui.font import Font
 
@@ -46,6 +47,7 @@ def cli(rule_base, path="./of/rule_set", overwrite=True, compress=False):
             input(" [continue]")
         elif answer == "w" or answer.startswith("write"):
             pretty_write(rule_base, path+'.selection', overwrite, compress)
+            write(rule_base, path+'.selection.pickle', overwrite)
             print("current selection written to {} !".format(path+'.selection'), end="")
             input(" [continue]")
         elif answer == "a" or answer == "abort":
@@ -63,6 +65,7 @@ def cli(rule_base, path="./of/rule_set", overwrite=True, compress=False):
 
         if input().startswith("y"):
             pretty_write(output, path+'.saved', overwrite, compress)
+            write(rule_base, path+'.saved.pickle', overwrite)
             print("Saved {} of {} rules".format(output.size(), n))
             logger.info("Saved {} of {} rules".format(output.size(), n))
 

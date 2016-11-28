@@ -310,8 +310,8 @@ def evaluate_rules(instance_graph, rules, queue, final_rule_set, minimal_support
             support = support_of(instance_graph, rule)
             confidence = confidence_of(instance_graph, rule)
 
-            if support >= minimal_support and\
-               confidence >= minimal_confidence:
+            if support.value >= minimal_support and\
+               confidence.value >= minimal_confidence:
                 final_rule_set.append(IRule(rule, support, confidence))
 
 def support_of(instance_graph, rule):
@@ -337,7 +337,7 @@ def support_of(instance_graph, rule):
     else:
         support = 0.0
 
-    return support
+    return IRule.Measure(support, number_of_supporting_facts, len(elements_of_type))
 
 def confidence_of(instance_graph, rule):
     """ Calculate the confidence for rule r given knowledge graph G
@@ -371,7 +371,7 @@ def confidence_of(instance_graph, rule):
     else:
         confidence = 0.0
 
-    return confidence
+    return IRule.Measure(confidence, number_of_rule_supporting_facts, number_of_antecedent_supporting_facts)
 
 if __name__ == "__main__":
     print("Functions for Semantic Rule Learning")

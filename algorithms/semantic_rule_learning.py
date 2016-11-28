@@ -274,8 +274,8 @@ def support_of(instance_graph, rule):
 
     :returns: support value between 0 and 1
     """
-    ctype = rule[0]
-    p, o = rule[1]  # antecedent
+    ctype = rule.ctype
+    p, o = rule.antecedent
 
     logger.debug("Calculating support")
     number_of_supporting_facts = 0
@@ -289,7 +289,7 @@ def support_of(instance_graph, rule):
     else:
         support = 0.0
 
-    return support
+    return IRule.Measure(support, number_of_supporting_facts, len(elements_of_type))
 
 def confidence_of(instance_graph, rule):
     """ Calculate the confidence for rule r given knowledge graph G
@@ -299,8 +299,8 @@ def confidence_of(instance_graph, rule):
 
     :returns: confidence value between 0 and 1
     """
-    ctype = rule[0]
-    p_0, o_0 = rule[1]  # antecedent
+    ctype = rule.ctype
+    p_0, o_0 = rule.antecedent
 
     logger.debug("Calculating confidence")
     number_of_antecedent_supporting_facts = 0
@@ -311,7 +311,7 @@ def confidence_of(instance_graph, rule):
             continue
 
         number_of_antecedent_supporting_facts += 1
-        for p_1, o_1 in rule[2]:  # consequent
+        for p_1, o_1 in rule.consequent:  # consequent
             if (s, p_1, o_1) not in instance_graph.graph:
                 break
 
@@ -322,7 +322,7 @@ def confidence_of(instance_graph, rule):
     else:
         confidence = 0.0
 
-    return confidence
+    return IRule.Measure(confidence, number_of_rule_supporting_facts, number_of_antecedent_supporting_facts)
 
 if __name__ == "__main__":
     print("Functions for Semantic Rule Learning")

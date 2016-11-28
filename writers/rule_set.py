@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import logging
+from rdflib.term import Literal
 from writers.auxiliarly import write
 
 
@@ -26,10 +27,10 @@ def _rule_to_string(irule):
 
     :returns: a string
     """
-    consequent = """{}""".format(irule.rule.consequent[0])
+    consequent = """{}""".format(_statement_to_string(irule.rule.consequent[0]))
     if len(irule.rule.consequent) > 1:
         consequent += """\n\tAND  """\
-                    + """\n\tAND  """.join(["{}".format(irule.rule.consequent[i])\
+                    + """\n\tAND  """.join(["{}".format(_statement_to_string(irule.rule.consequent[i]))\
                                             for i in range(1, len(irule.rule.consequent))])
 
     string = """[{}]
@@ -37,9 +38,21 @@ def _rule_to_string(irule):
     THEN {}
     Support:    {:.3f}
     Confidence: {:.3f}\n""".format(irule.rule.ctype,
-                              irule.rule.antecedent,
+                              _statement_to_string(irule.rule.antecedent),
                               consequent,
-                              irule.support,
-                              irule.confidence)
+                              irule.support.value,
+                              irule.confidence.value)
 
     return string
+
+def _statement_to_string(statement):
+    left = statement[0].toPython()
+    right = statement[1].toPython()
+
+    if type(statement[1]) is Literal:
+        if statement[1].language is not None:
+            right += " [rdf:lang={}]".format(statement[1].language)
+        elif statement[1].datatype is not None:
+            right += " [rdf:datatype={}]".format(statement[1].datatype)
+
+    return (left, right)

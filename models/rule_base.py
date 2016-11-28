@@ -28,10 +28,10 @@ class IRule:
     """ IRule class
     """
     rule = None
-    support = -1.0
-    confidence = -1.0
+    support = None
+    confidence = None
 
-    def __init__(self, rule=None, support=-1.0, confidence=-1.0):
+    def __init__(self, rule=None, support=None, confidence=None):
         if type(rule) is not Rule:
             raise TypeError("Expects instance of type Rule (was {})".format(type(rule)))
         else:
@@ -46,7 +46,32 @@ class IRule:
         return _rule_to_string(self)
 
     def __str__(self):
-        return "({}, {}, {})".format(str(self.rule), self.support, self.confidence)
+        return "({}, {}, {})".format(str(self.rule), str(self.support), str(self.confidence))
+
+    class Measure:
+        """ Measure class
+        """
+        numerator = 0.0
+        denominator = 0.0
+        value = 0.0
+
+        def __init__(self, value=None, numerator=None, denominator=None):
+            self.value = value
+            self.numerator = numerator
+            self.denominator = denominator
+
+            if self.value is None:
+                self._update()
+
+        def _update(self):
+            if self.numerator is not None and self.denominator is not None:
+                if self.denominator != 0.0:
+                    self.value = self.numerator / self.denominator
+                else:
+                    self.value = 0.0
+
+        def __str__(self):
+            return "{}".format(self.value)
 
 
 class RuleBase:
@@ -82,10 +107,10 @@ class RuleBase:
             if (self.filters.filters['class'] is None or irule.rule.ctype is self.filters.filters['class']) and\
                (self.filters.filters['antecedent'] is None or irule.rule.antecedent is self.filters.filters['antecedent']) and\
                (self.filters.filters['consequent'] is None or irule.rule.consequent is self.filters.filters['consequent']) and\
-               irule.support >= minimal_support and\
-               irule.support <= maximal_support and\
-               irule.confidence >= minimal_confidence and\
-               irule.confidence <= maximal_confidence:
+               (irule.support.value is None or irule.support.value >= minimal_support) and\
+               (irule.support.value is None or irule.support.value <= maximal_support) and\
+               (irule.confidence.value is None or irule.confidence.value >= minimal_confidence) and\
+               (irule.confidence.value is None or irule.confidence.value <= maximal_confidence):
                 yield irule
 
     def size(self):
@@ -94,9 +119,9 @@ class RuleBase:
     def sort(self, by_support=False, by_confidence=False, reverse=True):
         key = None
         if by_support:
-            key = lambda r: (r.support, r.confidence)
+            key = lambda r: (r.support.value, r.confidence.value)
         if by_confidence:
-            key = lambda r: (r.confidence, r.support)
+            key = lambda r: (r.confidence.value, r.support.value)
 
         self.model.sort(key=key, reverse=reverse)
 
