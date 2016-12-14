@@ -20,33 +20,33 @@ At present, the pipeline consists of three primary modules.
 ### Rule Miner
 usage: rule\_miner [-h] [-a ABOX] [-d DIRECTIVE] [-i] [-o OUTPUT] -t [TBOX] [-v]
 
-optional arguments:
-*  -h, --help            show this help message and exit
-*  -a ABOX, --abox ABOX  ABox graph
-*  -d DIRECTIVE, --directive DIRECTIVE Directive for rule learning
-*  -i, --interactive     Interactive mode
-*  -o OUTPUT, --output OUTPUT output path
-*  -t TBOX, --tbox TBOX  TBox graph
-*  -v, --verbose         increase output verbosity
+arguments:
+*  -h, --help            _show this help message and exit_
+*  -a ABOX, --abox ABOX  _ABox graph_
+*  -d DIRECTIVE, --directive DIRECTIVE _Directive for rule learning_
+*  -i, --interactive     _Interactive mode_
+*  -o OUTPUT, --output OUTPUT _output path_
+*  -t TBOX, --tbox TBOX  _TBox graph_
+*  -v, --verbose         _increase output verbosity_
 
 
 ### Model Evaluator
 usage: model\_evaluator [-h] [-f FILTER] [-m MODEL] [-o OUTPUT] [-v]
 
-optional arguments:
-*  -h, --help            show this help message and exit
-*  -f FILTER, --filter FILTER Custom filter
-*  -m MODEL, --model MODEL Rule-based model
-*  -o OUTPUT, --output OUTPUT Output path
-*  -v, --verbose         Increase output verbosity
+arguments:
+*  -h, --help            _show this help message and exit_
+*  -f FILTER, --filter FILTER _Custom filter_
+*  -m MODEL, --model MODEL _Rule-based model_
+*  -o OUTPUT, --output OUTPUT _Output path_
+*  -v, --verbose         _Increase output verbosity_
 
 ### Anomaly Detector
 usage: anomaly\_detector [-h] [-a ABOX] [-i] [-m MODEL] [-o OUTPUT] [-v]
 
-optional arguments:
-*  -h, --help            show this help message and exit
-*  -a ABOX, --abox ABOX  ABox graph
-*  -i, --interactive     Interactive mode
-*  -m MODEL, --model MODEL Rule-based model
-*  -o OUTPUT, --output OUTPUT output path
-*  -v, --verbose         increase output verbosity
+arguments:
+*  -h, --help            _show this help message and exit_
+*  -a ABOX, --abox ABOX  _ABox graph_
+*  -i, --interactive     _Interactive mode)_
+*  -m MODEL, --model MODEL _Rule-based model_
+*  -o OUTPUT, --output OUTPUT _output path_
+*  -v, --verbose         _increase output verbosity_
