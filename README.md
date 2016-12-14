@@ -18,42 +18,35 @@ adding various filters. Finally, the user may choose to store any or all of the 
 At present, the pipeline consists of three primary modules.
 
 ### Rule Miner
-usage: rule\_miner [-h] [-a ABOX] [-d DIRECTIVE] [-i] [-o OUTPUT] -t TBOX] [-v]
+usage: rule\_miner [-h] [-a ABOX] [-d DIRECTIVE] [-i] [-o OUTPUT] -t [TBOX] [-v]
 
 optional arguments:
-  -h, --help            show this help message and exit
-  -a ABOX, --abox ABOX  ABox graph
-  -d DIRECTIVE, --directive DIRECTIVE
-                        Directive for rule learning
-  -i, --interactive     Interactive mode
-  -o OUTPUT, --output OUTPUT
-                        output path
-  -t TBOX, --tbox TBOX  TBox graph
-  -v, --verbose         increase output verbosity
+*  -h, --help            show this help message and exit
+*  -a ABOX, --abox ABOX  ABox graph
+*  -d DIRECTIVE, --directive DIRECTIVE Directive for rule learning
+*  -i, --interactive     Interactive mode
+*  -o OUTPUT, --output OUTPUT output path
+*  -t TBOX, --tbox TBOX  TBox graph
+*  -v, --verbose         increase output verbosity
 
 
 ### Model Evaluator
 usage: model\_evaluator [-h] [-f FILTER] [-m MODEL] [-o OUTPUT] [-v]
 
 optional arguments:
-  -h, --help            show this help message and exit
-  -f FILTER, --filter FILTER
-                        Custom filter
-  -m MODEL, --model MODEL
-                        Rule-based model
-  -o OUTPUT, --output OUTPUT
-                        Output path
-  -v, --verbose         Increase output verbosity
+*  -h, --help            show this help message and exit
+*  -f FILTER, --filter FILTER Custom filter
+*  -m MODEL, --model MODEL Rule-based model
+*  -o OUTPUT, --output OUTPUT Output path
+*  -v, --verbose         Increase output verbosity
 
 ### Anomaly Detector
 usage: anomaly\_detector [-h] [-a ABOX] [-i] [-m MODEL] [-o OUTPUT] [-v]
 
 optional arguments:
-  -h, --help            show this help message and exit
-  -a ABOX, --abox ABOX  ABox graph
-  -i, --interactive     Interactive mode
-  -m MODEL, --model MODEL
-                        Rule-based model
-  -o OUTPUT, --output OUTPUT
-                        output path
-  -v, --verbose         increase output verbosity
+*  -h, --help            show this help message and exit
+*  -a ABOX, --abox ABOX  ABox graph
+*  -i, --interactive     Interactive mode
+*  -m MODEL, --model MODEL Rule-based model
+*  -o OUTPUT, --output OUTPUT output path
+*  -v, --verbose         increase output verbosity
