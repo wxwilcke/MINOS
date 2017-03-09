@@ -3,6 +3,7 @@
 import logging
 from rdflib.term import Literal
 from writers.auxiliarly import write
+from writers.transcribers import to_dutch
 
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,35 @@ def pretty_write(output, path="./of/latest", overwrite=True, compress=False):
 
     write(output.model, path, overwrite, compress, _rule_to_string)
 
-def _rule_to_string(irule):
+def natural_write(output, path="./of/latest", abox=None, tbox=None, vocab=None, overwrite=True, compress=False):
+    """ Pretty print a rule set in natural text
+
+    :param output: a list of rules
+    :param path: file path to write to
+    :param overwrite: overwrite file at path if exists
+    :param compress: compress output as tar
+    :param abox: assertional data used during transcribing
+    :param tbox: schema data used during transcribing
+    :param vocab: controlled vocabulary used during transcribing
+
+    :returns: none
+    """
+
+    write(output.model, path, overwrite, compress, _rule_to_natural_text, abox, tbox, vocab)
+
+def _rule_to_natural_text(irule, abox=None, tbox=None, vocab=None):
+    """ Wrap a rule into a transcribed string
+
+    :param irule: a (rule, support, confidence) tuple
+    :param abox: assertional data used during transcribing
+    :param tbox: schema data used during transcribing
+    :param vocab: controlled vocabulary used during transcribing
+
+    :returns: a string
+    """
+    return to_dutch.transcribe(irule, abox, tbox, vocab)
+
+def _rule_to_string(irule, *args):
     """ Wrap a rule into a pretty string
 
     :param irule: a (rule, support, confidence) tuple

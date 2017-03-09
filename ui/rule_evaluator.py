@@ -2,7 +2,8 @@
 
 import logging
 from models.rule_base import RuleBase
-from writers.rule_set import pretty_write, _rule_to_string
+from readers import rdf
+from writers.rule_set import pretty_write, natural_write, _rule_to_string
 from writers.pickler import write
 from ui.auxiliarly import clear_term
 from ui.font import Font
@@ -10,8 +11,25 @@ from ui.font import Font
 
 logger = logging.getLogger(__name__)
 
-def cli(rule_base, path="./of/rule_set", overwrite=True, compress=False):
+def cli(rule_base, abox=None, tbox=None, vocab=None, path="./of/rule_set", transcribe=False, overwrite=True, compress=False):
     logger.info("Initiating CLI")
+
+    if abox is not None:
+        logger.info("Loading ABox Graph")
+        abox = rdf.read(local_path=abox)
+        transcribe = True
+    if tbox is not None:
+        logger.info("Loading TBox Graph")
+        tbox = rdf.read(local_path=tbox)
+        transcribe = True
+    if vocab is not None:
+        logger.info("Loading Controlled Vocabulary")
+        vocab = rdf.read(local_path=vocab)
+        transcribe = True
+
+    _ui(rule_base, abox, tbox, vocab, path, transcribe, overwrite, compress)
+
+def _ui(rule_base, abox, tbox, vocab, path, transcribe, overwrite, compress):
     font = Font()
     filters = RuleBase.Filter()
     output = RuleBase()
@@ -46,7 +64,10 @@ def cli(rule_base, path="./of/rule_set", overwrite=True, compress=False):
             print(" rule saved to temporary buffer!", end="")
             input(" [continue]")
         elif answer == "w" or answer.startswith("write"):
-            pretty_write(rule_base, path+'.selection', overwrite, compress)
+            if transcribe:
+                natural_write(rule_base, path+'.selection', abox, tbox, vocab, overwrite, compress)
+            else:
+                pretty_write(rule_base, path+'.selection', overwrite, compress)
             write(rule_base, path+'.selection.pickle', overwrite)
             print("current selection written to {} !".format(path+'.selection'), end="")
             input(" [continue]")
@@ -64,7 +85,10 @@ def cli(rule_base, path="./of/rule_set", overwrite=True, compress=False):
               end="")
 
         if input().startswith("y"):
-            pretty_write(output, path+'.saved', overwrite, compress)
+            if transcribe:
+                natural_write(output, path+'.saved', abox, tbox, vocab, overwrite, compress)
+            else:
+                pretty_write(output, path+'.saved', overwrite, compress)
             write(rule_base, path+'.saved.pickle', overwrite)
             print("Saved {} of {} rules".format(output.size(), n))
             logger.info("Saved {} of {} rules".format(output.size(), n))

@@ -17,8 +17,8 @@ def run(args, time):
 
         program = klass(time)
         program.run(model)
-    
-    rule_evaluator.cli(model, args.output)
+
+    rule_evaluator.cli(model, args.abox, args.tbox, args.vocab, args.output)
 
 def print_header():
     header = 'An Experimental Pipeline for Data Mining on Linked Archaeological Data'
@@ -42,6 +42,9 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model", help="Rule-based model", default=None)
     parser.add_argument("-o", "--output", help="Output path", default="./of/output-{}".format(time))
     parser.add_argument("-v", "--verbose", help="Increase output verbosity", action="store_true")
+    parser.add_argument("--abox", help="ABox graph", default=None)
+    parser.add_argument("--tbox", help="TBox graph", default=None)
+    parser.add_argument("--vocab", help="Controlled vocabulary graph", default=None)
     args = parser.parse_args()
 
     set_logging(args, time)

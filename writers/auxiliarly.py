@@ -8,7 +8,7 @@ import re
 
 logger = logging.getLogger(__name__)
 
-def write(output=[], path="./of/latest", overwrite=True, compress=False, printer=None):
+def write(output=[], path="./of/latest", overwrite=True, compress=False, printer=None, abox=None, tbox=None, vocab=None):
     """ Write a list of items
 
     :param output: a list of items
@@ -20,7 +20,7 @@ def write(output=[], path="./of/latest", overwrite=True, compress=False, printer
     """
     buff = ""
     for item in output:
-        buff += printer(item) + "\n"
+        buff += printer(item, abox, tbox, vocab) + "\n"
     buff += "<EOF>"
 
     mode = 'w' if overwrite else 'x'
