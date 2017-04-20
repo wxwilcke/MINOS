@@ -4,7 +4,7 @@ import logging
 
 from rdflib import Graph
 from rdflib.util import guess_format
-from SPARQLWrapper import SPARQLWrapper
+#from SPARQLWrapper import SPARQLWrapper
 
 from models.knowledge_graph import KnowledgeGraph
 
@@ -47,10 +47,12 @@ def query(query_string="", endpoint=""):
     logger.info("Endpoint set to '{}'".format(endpoint))
     logger.info("Query set to '{}'".format(query_string))
 
+    graph = None
     try:
-        sparql = SPARQLWrapper(endpoint)
-        sparql.setQuery(query_string)
-        graph = sparql.queryAndConvert()
+        pass
+        #sparql = SPARQLWrapper(endpoint)
+        #sparql.setQuery(query_string)
+        #graph = sparql.queryAndConvert()
     except:
         raise RuntimeError("Query Failed")
     logger.info("Query results ({} facts) succesfully retrieved".format(len(graph)))

@@ -1,35 +1,45 @@
 #!/usr/bin/python3
 
 import logging
+from time import time
 from models.rule_base import RuleBase
 from readers import rdf
-from writers.rule_set import pretty_write, natural_write, _rule_to_string
-from writers.pickler import write
+from writers.rule_set import pretty_write, pretty_label_write, natural_write, _rule_to_string, _rule_to_label_string, _rule_to_natural_text
+from writers.pickler import write as dump
 from ui.auxiliarly import clear_term
 from ui.font import Font
 
 
 logger = logging.getLogger(__name__)
 
-def cli(rule_base, abox=None, tbox=None, vocab=None, path="./of/rule_set", transcribe=False, overwrite=True, compress=False):
+def cli(rule_base, abox=None, tbox=None, vocab=None, path="./of/rule_set", mode="uri", lang="en", overwrite=True, compress=False):
     logger.info("Initiating CLI")
 
     if abox is not None:
         logger.info("Loading ABox Graph")
         abox = rdf.read(local_path=abox)
-        transcribe = True
     if tbox is not None:
         logger.info("Loading TBox Graph")
         tbox = rdf.read(local_path=tbox)
-        transcribe = True
     if vocab is not None:
         logger.info("Loading Controlled Vocabulary")
         vocab = rdf.read(local_path=vocab)
-        transcribe = True
 
-    _ui(rule_base, abox, tbox, vocab, path, transcribe, overwrite, compress)
+    printer = None
+    writer = None
+    if mode == "label":
+        printer = _rule_to_label_string
+        writer = pretty_label_write
+    elif mode == "natural":
+        printer = _rule_to_natural_text
+        writer = natural_write
+    else:  # mode == uri
+        writer = pretty_write
+        printer = _rule_to_string
 
-def _ui(rule_base, abox, tbox, vocab, path, transcribe, overwrite, compress):
+    _ui(rule_base, abox, tbox, vocab, path, printer, writer, lang, overwrite, compress)
+
+def _ui(rule_base, abox, tbox, vocab, path, printer, writer, lang, overwrite, compress):
     font = Font()
     filters = RuleBase.Filter()
     output = RuleBase()
@@ -41,13 +51,13 @@ def _ui(rule_base, abox, tbox, vocab, path, transcribe, overwrite, compress):
     while i < n:
         clear_term()
         print("RULE {} / {}".format(i+1, n))
-        print(_rule_to_string(rule_base.model[i]))
+        print(printer(rule_base.model[i], abox, tbox, vocab, lang))
         print("[ACTION] ([{}] / {} / {} / {} / {} / {}): ".format(font.bold_first_char("next"),
                                                                   font.bold_first_char("previous"),
+                                                                  font.bold_first_char("add to buffer"),
                                                                   font.bold_first_char("filter"),
-                                                                  font.bold_first_char("save current"),
-                                                                  font.bold_first_char("write selection"),
-                                                                  font.bold_first_char("abort")),
+                                                                  font.bold_first_char("write rule set"),
+                                                                  font.bold_first_char("exit")),
               end="")
         answer = input()
 
@@ -59,19 +69,14 @@ def _ui(rule_base, abox, tbox, vocab, path, transcribe, overwrite, compress):
             n = rule_base.size()
             i = 0
             continue
-        elif answer == "s" or answer.startswith("save"):
+        elif answer == "a" or answer.startswith("add"):
             output.add(rule_base.model[i])
             print(" rule saved to temporary buffer!", end="")
+            i -= 1
             input(" [continue]")
         elif answer == "w" or answer.startswith("write"):
-            if transcribe:
-                natural_write(rule_base, path+'.selection', abox, tbox, vocab, overwrite, compress)
-            else:
-                pretty_write(rule_base, path+'.selection', overwrite, compress)
-            write(rule_base, path+'.selection.pickle', overwrite)
-            print("current selection written to {} !".format(path+'.selection'), end="")
-            input(" [continue]")
-        elif answer == "a" or answer == "abort":
+            _write_dialogue(font, rule_base, path, writer, overwrite, compress, abox, tbox, vocab, lang)
+        elif answer == "e" or answer == "exit":
             break
 
         # next
@@ -79,19 +84,40 @@ def _ui(rule_base, abox, tbox, vocab, path, transcribe, overwrite, compress):
 
 
     if output.size() > 0:
-        print("write {} saved rule(s)? ({} / [{}]): ".format(output.size(),
+        print("write {} rules in buffer? ({} / [{}]): ".format(output.size(),
                                                             font.bold_first_char("yes"),
                                                             font.bold_first_char("no")),
               end="")
 
         if input().startswith("y"):
-            if transcribe:
-                natural_write(output, path+'.saved', abox, tbox, vocab, overwrite, compress)
-            else:
-                pretty_write(output, path+'.saved', overwrite, compress)
-            write(rule_base, path+'.saved.pickle', overwrite)
+            _write_dialogue(font, rule_base, path+'_buffer{}'.format(int(time())), writer, overwrite,
+                            compress, abox, tbox, vocab, lang)
             print("Saved {} of {} rules".format(output.size(), n))
             logger.info("Saved {} of {} rules".format(output.size(), n))
+
+def _write_dialogue(font, rule_set, path, writer, overwrite, compress, abox, tbox, vocab, lang):
+    print("[WRITE] ({} / {} / {} / [{}]): ".format(font.bold_first_char("text file"),
+                                                   font.bold_first_char("pickle file"),
+                                                   font.bold_first_char("both"),
+                                                   font.bold_first_char("return")),
+          end="")
+    answer = input()
+
+    if answer == "t" or answer.startswith("text"):
+        writer(rule_set, path+'.rules', overwrite, compress, abox, tbox, vocab, lang)
+        print("written to {} !".format(path+'.rules'), end="")
+    elif answer == "p" or answer.startswith("pickle"):
+        dump(rule_set, path+'.pickle', overwrite)
+        print("written to {} !".format(path+'.pickle'), end="")
+    elif answer == "b" or answer.startswith("both"):
+        writer(rule_set, path+'.rules', overwrite, compress, abox, tbox, vocab, lang)
+        print("written to {} !".format(path+'.rules'), end="\n")
+        dump(rule_set, path+'.pickle', overwrite)
+        print("written to {} !".format(path+'.pickle'), end="")
+    else:
+        return
+
+    input(" [continue]")
 
 def _add_filters(rule_base, filters, font):
     key = None

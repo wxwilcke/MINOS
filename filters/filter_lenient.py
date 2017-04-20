@@ -31,7 +31,7 @@ class Filter(AbstractInstructionSet):
         print(" {} rules remaining".format(model.size()))
 
     def is_common(self, irule):
-        return True if irule.support.value >= 0.6 else False
+        return True if irule.support.value >= 0.9 else False
 
     def is_multirule(self, irule):
         return True if len(irule.rule.consequent) >= 2 else False
@@ -41,8 +41,8 @@ class Filter(AbstractInstructionSet):
                         irule.confidence.numerator <= 1) else False
 
     def is_rare(self, irule):
-        return True if (irule.support.denominator <= 1 or\
-                        irule.confidence.denominator <= 1) else False
+        return True if (irule.support.denominator <= 2 or\
+                        irule.confidence.denominator <= 2) else False
 
     def has_irrelevant_antecedent(self, irule):
         return self.is_irrelevant_predicate(irule.rule.antecedent[0])
